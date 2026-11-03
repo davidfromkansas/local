@@ -20,6 +20,7 @@ final class HotMicController {
     @ObservationIgnored private let store: SharedStore
     @ObservationIgnored private let capture: CaptureContext
     @ObservationIgnored private var audioEngine: AVAudioEngine?
+    @ObservationIgnored private var silentPlayer: AVAudioPlayerNode?
     @ObservationIgnored private var listener: Task<Void, Never>?
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var captureStartedAt: Date?
@@ -191,21 +192,48 @@ final class HotMicController {
         try session.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker])
         try session.setActive(true)
         let audioEngine = AVAudioEngine()
-        let input = audioEngine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        guard format.channelCount > 0, format.sampleRate > 0 else {
+        if session.isInputAvailable, case let format = audioEngine.inputNode.outputFormat(forBus: 0),
+           format.channelCount > 0, format.sampleRate > 0 {
+            capture.install(on: audioEngine.inputNode, format: format)
+        } else if Self.debugFeedEnabled {
+            // No mic (simulator on a Mac without one): play silence so the engine keeps the app alive.
+            try startSilentKeepAlive(on: audioEngine)
+        } else {
             throw HotMicError.noMicrophone
         }
-        capture.install(on: input, format: format)
         audioEngine.prepare()
         try audioEngine.start()
+        silentPlayer?.play()
         self.audioEngine = audioEngine
+    }
+
+    private func startSilentKeepAlive(on audioEngine: AVAudioEngine) throws {
+        let player = AVAudioPlayerNode()
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1),
+              let silence = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000) else {
+            throw HotMicError.noMicrophone
+        }
+        silence.frameLength = 16_000
+        audioEngine.attach(player)
+        audioEngine.connect(player, to: audioEngine.mainMixerNode, format: format)
+        player.scheduleBuffer(silence, at: nil, options: .loops)
+        silentPlayer = player
+    }
+
+    private static var debugFeedEnabled: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: SettingsKey.debugFeed)
+        #else
+        false
+        #endif
     }
 
     private func stopAudio() {
         ticker?.cancel()
         ticker = nil
-        audioEngine?.inputNode.removeTap(onBus: 0)
+        if silentPlayer == nil { audioEngine?.inputNode.removeTap(onBus: 0) }
+        silentPlayer?.stop()
+        silentPlayer = nil
         audioEngine?.stop()
         audioEngine = nil
         level = 0
