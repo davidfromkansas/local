@@ -18,7 +18,7 @@ Taki is an offline, Wispr Flow-style voice keyboard for iPhone (iOS 26+, Swift 6
 Keyboard extensions **cannot use the microphone** and have a tight memory limit (~50–70 MB), so all audio + models live in the main app. Never link `TakiEngine`/FluidAudio into the keyboard.
 
 1. Keyboard mic tap with no live session → opens `taki://start` (SwiftUI `openURL` from the keyboard view; requires Full Access).
-2. App (`HotMicController`) activates `AVAudioSession(.playAndRecord, .measurement, [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker])`, starts `AVAudioEngine` with an input tap in **armed** mode (buffers dropped). `UIBackgroundModes=audio` keeps it alive in the background. Shows "Swipe back to continue". Session ends after the idle timeout (default 5 min, Settings).
+2. App (`HotMicController`) activates `AVAudioSession(.playAndRecord, .measurement, [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker])`, starts `AVAudioEngine` with an input tap in **armed** mode (buffers dropped). `UIBackgroundModes=audio` keeps it alive in the background. Shows "Swipe back to continue". Session stays on until the user ends it (default "Never"; an idle timeout can be set in Settings).
 3. Next keyboard taps post Darwin notifications `start`/`stop`; app flips to **capturing** (16 kHz mono Float32 via `CaptureContext`, on the audio thread), on stop runs VAD → ASR → cleanup, writes the result, posts `resultReady`; keyboard inserts it.
 
 States are a pure value type: `SessionMachine` (inactive → armed → capturing → processing → armed). Keyboard shows `KeyboardUIState` notReady / ready / recording / processing.

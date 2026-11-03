@@ -30,7 +30,7 @@ final class AppModel {
     init() {
         UserDefaults.standard.register(defaults: [
             SettingsKey.model: ASRModelChoice.parakeetUnified.rawValue,
-            SettingsKey.timeout: 300.0,
+            SettingsKey.timeout: 0.0, // Never: stay on until the user ends it
             SettingsKey.cleanup: true,
             SettingsKey.debugFeed: false,
         ])

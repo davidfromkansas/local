@@ -4,7 +4,7 @@ import TakiEngine
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @AppStorage(SettingsKey.model) private var modelChoice = ASRModelChoice.parakeetUnified.rawValue
-    @AppStorage(SettingsKey.timeout) private var timeout = 300.0
+    @AppStorage(SettingsKey.timeout) private var timeout = 0.0
     @AppStorage(SettingsKey.cleanup) private var cleanup = true
     @AppStorage(SettingsKey.debugFeed) private var debugFeed = false
     @AppStorage(SettingsKey.onboarded) private var onboarded = true
