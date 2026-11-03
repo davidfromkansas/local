@@ -102,8 +102,15 @@ public enum KeyboardUIState: Sendable, Equatable {
     case recording
     case processing
 
+    public static let heartbeatTimeout: TimeInterval = 8
+
     public init(snapshot: SessionSnapshot?, now: Date = .now) {
         guard let snapshot else { self = .notReady; return }
+        // The app rewrites the snapshot every couple of seconds; a stale one means it was killed.
+        if snapshot.phase != .inactive, now.timeIntervalSince(snapshot.updatedAt) > Self.heartbeatTimeout {
+            self = .notReady
+            return
+        }
         switch snapshot.phase {
         case .inactive:
             self = .notReady

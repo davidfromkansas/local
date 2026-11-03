@@ -55,4 +55,11 @@ struct IPCTests {
         #expect(KeyboardUIState(snapshot: .init(phase: .capturing), now: now) == .recording)
         #expect(KeyboardUIState(snapshot: .init(phase: .processing), now: now) == .processing)
     }
+
+    @Test func `stale snapshot means the app is gone`() {
+        let now = Date(timeIntervalSince1970: 100)
+        #expect(KeyboardUIState(snapshot: .init(phase: .armed, updatedAt: now.addingTimeInterval(-3)), now: now) == .ready)
+        #expect(KeyboardUIState(snapshot: .init(phase: .armed, updatedAt: now.addingTimeInterval(-30)), now: now) == .notReady)
+        #expect(KeyboardUIState(snapshot: .init(phase: .processing, updatedAt: now.addingTimeInterval(-30)), now: now) == .notReady)
+    }
 }

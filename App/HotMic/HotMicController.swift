@@ -25,6 +25,7 @@ final class HotMicController {
     @ObservationIgnored private var debugBackgroundTask: UIBackgroundTaskIdentifier = .invalid
     @ObservationIgnored private var listener: Task<Void, Never>?
     @ObservationIgnored private var ticker: Task<Void, Never>?
+    @ObservationIgnored private var lastHeartbeat = Date.distantPast
     @ObservationIgnored private var captureStartedAt: Date?
     @ObservationIgnored private var feedSamples: [Float]?
 
@@ -188,6 +189,9 @@ final class HotMicController {
         if machine.handle(.tick(now: .now)) == .stopEngine {
             stopAudio()
             publish()
+        } else if machine.phase != .inactive, Date.now.timeIntervalSince(lastHeartbeat) >= 2 {
+            lastHeartbeat = .now
+            store.write(machine.snapshot)
         }
     }
 
