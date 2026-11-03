@@ -21,6 +21,8 @@ final class KeyboardModel {
     @ObservationIgnored var deleteBackward: () -> Void = {}
     @ObservationIgnored var contextBeforeInput: () -> String? = { nil }
     @ObservationIgnored var advanceToNextKeyboard: () -> Void = {}
+    /// Opens a URL in another app. Returns false when the system refused.
+    @ObservationIgnored var openURL: (URL) -> Bool = { _ in false }
 
     @ObservationIgnored private let store = SharedStore()
     @ObservationIgnored private var listener: Task<Void, Never>?
@@ -65,15 +67,14 @@ final class KeyboardModel {
         poller = nil
     }
 
-    /// Returns true when the caller should open the main app (`taki://start`).
-    func micTapped() -> Bool {
+    func micTapped() {
         guard hasFullAccess, let store else {
             show("Turn on Allow Full Access for Taki in Settings")
-            return false
+            return
         }
         switch state {
         case .notReady:
-            return true
+            if !openURL(Self.startURL) { show("Open the Taki app to start") }
         case .ready:
             let request = DictationRequest()
             pendingRequest = request.id
@@ -87,7 +88,6 @@ final class KeyboardModel {
         case .processing:
             break
         }
-        return false
     }
 
     var statusText: String {

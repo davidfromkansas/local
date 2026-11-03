@@ -11,6 +11,7 @@ final class KeyboardViewController: UIInputViewController {
         model.deleteBackward = { [weak self] in self?.textDocumentProxy.deleteBackward() }
         model.contextBeforeInput = { [weak self] in self?.textDocumentProxy.documentContextBeforeInput }
         model.advanceToNextKeyboard = { [weak self] in self?.advanceToNextInputMode() }
+        model.openURL = { [weak self] url in self?.openContainingApp(url) ?? false }
 
         let host = UIHostingController(rootView: KeyboardView(model: model))
         host.view.backgroundColor = .clear
@@ -29,6 +30,24 @@ final class KeyboardViewController: UIInputViewController {
         ])
         host.didMove(toParent: self)
         self.host = host
+    }
+
+    /// Keyboard extensions can't open URLs: SwiftUI's `openURL` and `extensionContext.open` silently do nothing.
+    /// Walk the responder chain to the host `UIApplication` and call `open(_:options:completionHandler:)`
+    /// through the Objective-C runtime (the method is marked unavailable for extensions at compile time).
+    private func openContainingApp(_ url: URL) -> Bool {
+        let selector = NSSelectorFromString("openURL:options:completionHandler:")
+        var responder: UIResponder? = self
+        while let current = responder {
+            if let app = current as? UIApplication, app.responds(to: selector) {
+                typealias Open = @convention(c) (NSObject, Selector, NSURL, NSDictionary, (@convention(block) (Bool) -> Void)?) -> Void
+                let open = unsafeBitCast(app.method(for: selector), to: Open.self)
+                open(app, selector, url as NSURL, NSDictionary(), nil)
+                return true
+            }
+            responder = current.next
+        }
+        return false
     }
 
     override func viewWillAppear(_ animated: Bool) {

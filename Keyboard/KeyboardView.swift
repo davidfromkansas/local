@@ -5,7 +5,6 @@ import TakiCore
 /// Tap mic → it lights up while dictating; tap again → text is typed in and the letters stay.
 struct KeyboardView: View {
     let model: KeyboardModel
-    @Environment(\.openURL) private var openURL
 
     private let spacing: CGFloat = 6
 
@@ -113,7 +112,7 @@ struct KeyboardView: View {
             KeyButton(title: "return", label: "Return", kind: .function, fontSize: 16) { model.returnKey() }
                 .frame(width: unit * 1.9)
             MicKey(state: model.state, level: model.levels.last ?? 0) {
-                if model.micTapped() { openURL(KeyboardModel.startURL) }
+                model.micTapped()
             }
             .frame(width: unit * 1.3)
         }
