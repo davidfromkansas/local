@@ -9,7 +9,7 @@ struct AppSmokeTests {
     @Test func settingsDefaultsAreRegistered() {
         let model = AppModel()
         #expect(model.modelChoice == .parakeetUnified)
-        #expect(UserDefaults.standard.double(forKey: SettingsKey.timeout) == 300)
+        #expect(UserDefaults.standard.double(forKey: SettingsKey.timeout) == 0)
         #expect(model.hotMic.phase == .inactive)
     }
 }
