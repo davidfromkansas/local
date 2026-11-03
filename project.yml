@@ -38,6 +38,9 @@ targets:
         embed: true
     entitlements:
       path: Config/Taki.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(TAKI_APP_GROUP)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_BUNDLE_ID)
@@ -73,6 +76,9 @@ targets:
         product: TakiCore
     entitlements:
       path: Config/TakiKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(TAKI_APP_GROUP)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_KEYBOARD_BUNDLE_ID)

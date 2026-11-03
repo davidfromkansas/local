@@ -9,7 +9,8 @@ struct OnboardingView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(SettingsKey.onboarded) private var onboarded = false
-    @State private var step: Step = .welcome
+    // Persisted: toggling keyboard/Full Access in Settings can relaunch the app mid-onboarding.
+    @AppStorage("onboardingStep") private var step: Step = .welcome
     @State private var micGranted = AVAudioApplication.shared.recordPermission == .granted
     @State private var tryText = ""
 
