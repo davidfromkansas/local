@@ -1,0 +1,10 @@
+// Edit these to re-brand or re-sign Taki. Everything else reads from here.
+TAKI_BUNDLE_ID = com.davidfromkansas.taki
+TAKI_KEYBOARD_BUNDLE_ID = $(TAKI_BUNDLE_ID).keyboard
+TAKI_APP_GROUP = group.com.davidfromkansas.taki
+DEVELOPMENT_TEAM = 8FGG5DR669
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+
+// Simulator builds sign ad hoc so they work without an Apple account on the machine.
+CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = -

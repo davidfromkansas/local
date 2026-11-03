@@ -1,0 +1,54 @@
+[
+  {
+    "file": "01-meeting.wav",
+    "voice": "Samantha",
+    "reference": "Can we move the team meeting to Thursday at 3 PM?"
+  },
+  {
+    "file": "02-grocery.wav",
+    "voice": "Daniel",
+    "reference": "Please pick up eggs, milk, and two loaves of bread on your way home."
+  },
+  {
+    "file": "03-numbers.wav",
+    "voice": "Samantha",
+    "reference": "The invoice total is 482 dollars and it is due on March 15th."
+  },
+  {
+    "file": "04-names.wav",
+    "voice": "Karen",
+    "reference": "Tell Priya and Marcus that the launch party starts at 7."
+  },
+  {
+    "file": "05-correction.wav",
+    "voice": "Samantha",
+    "reference": "Let's meet at 5, actually I mean 6.",
+    "cleaned": "Let's meet at 6."
+  },
+  {
+    "file": "06-question.wav",
+    "voice": "Daniel",
+    "reference": "Did you remember to send the slides to the client this morning?"
+  },
+  {
+    "file": "07-address.wav",
+    "voice": "Samantha",
+    "reference": "My new address is 1726 Anza Street in San Francisco."
+  },
+  {
+    "file": "08-long.wav",
+    "voice": "Karen",
+    "reference": "I think the new design looks great, but the buttons feel a little small on the phone, so let's make them bigger before we ship."
+  },
+  {
+    "file": "09-filler.wav",
+    "voice": "Samantha",
+    "reference": "Um, so I was thinking we could, uh, try the new ramen place tonight.",
+    "cleaned": "So I was thinking we could try the new ramen place tonight."
+  },
+  {
+    "file": "10-tech.wav",
+    "voice": "Daniel",
+    "reference": "The app runs speech recognition on the device, so it works without an internet connection."
+  }
+]
