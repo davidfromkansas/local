@@ -1,0 +1,837 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0119A23A640B812AE2280E38 /* 03-numbers.wav in Resources */ = {isa = PBXBuildFile; fileRef = 59413675E546B8104318B673 /* 03-numbers.wav */; };
+		01BE43EA57509E2622941563 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7155E871C91ECB00AC950E5F /* OnboardingView.swift */; };
+		0356564E2231A273C9657781 /* KeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */; };
+		0C2E3C351E823616B039F551 /* LevelWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DABA58368312162B17B94D1 /* LevelWaveform.swift */; };
+		18598000BCE542A92CD41630 /* 06-question.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2A9F1719E535FE14EF5D4AA7 /* 06-question.wav */; };
+		199BEBF128B57DD056B69C97 /* TakiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95C196B3D5A76156B0B97950 /* TakiApp.swift */; };
+		1C3EEA317459C2CEDBA8AB6C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2D0B57E87EB9F65B792E594E /* Assets.xcassets */; };
+		1CCBC79D8D2280027C01335E /* TakiCore in Frameworks */ = {isa = PBXBuildFile; productRef = EEBDA32635A472C84EDBD228 /* TakiCore */; };
+		31BD358BB3ACD4B150F786D3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADE909E73247F5651AC6F6B /* Theme.swift */; };
+		36C9794A43224A14F8B5A4C9 /* clips.json in Resources */ = {isa = PBXBuildFile; fileRef = 6F6F6D5DE2B47F40C0D63565 /* clips.json */; };
+		378F2F0DCDC49F6B9EA9634E /* 08-long.wav in Resources */ = {isa = PBXBuildFile; fileRef = 36B9134D9FE2D27DB9A3DCF9 /* 08-long.wav */; };
+		3DD3DF2EF37E7313114AB6C2 /* ASRAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD95466B3A1EB1690DCF9EA /* ASRAccuracyTests.swift */; };
+		3F00F2FD0028E55A8DAF10DC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6B853060F16E5A38CA458E /* SettingsView.swift */; };
+		4429CC858C63679BD3BCA409 /* 07-address.wav in Resources */ = {isa = PBXBuildFile; fileRef = C065F207F9E55B5D1946FCA3 /* 07-address.wav */; };
+		4736807D786B008FA189AC82 /* TakiCore in Frameworks */ = {isa = PBXBuildFile; productRef = AA65D54A46761847FC9008B8 /* TakiCore */; };
+		4C427C6AF64ADEEEC9CD2C54 /* TakiKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C9DD5C34656E136CD07CFC43 /* TakiKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		53F1640608AD1A46CD365303 /* CaptureContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFDC69F5568ED0AF4CA081AA /* CaptureContext.swift */; };
+		5424094AEC9174B351325F51 /* LevelWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DABA58368312162B17B94D1 /* LevelWaveform.swift */; };
+		562A4D8B79EA22C9DB92DFF5 /* Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD1496F6168C8822D122DD6 /* Records.swift */; };
+		58ED84D06F460C924973F7C2 /* HotMicController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D257B24A1BD0B377939F2C4E /* HotMicController.swift */; };
+		5D6ED4B45D2AF7AC42232D91 /* DictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6BB390068B50EC23063D41F /* DictionaryView.swift */; };
+		612750C4388AFAAD0179AF0C /* MicOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69D587B4CD2D7D6600C5A5E /* MicOrb.swift */; };
+		61B5E106CD0E7B91171FB81D /* debug-feed.wav in Resources */ = {isa = PBXBuildFile; fileRef = 05D59FE14588322878E63472 /* debug-feed.wav */; };
+		6698DACFE3EECE044E39FD1C /* AppSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A635D1134A25BC168BE9A8 /* AppSmokeTests.swift */; };
+		68E3CAE3AB7DDE1FDA2A45E2 /* 05-correction.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2E59447675FCD34038383A13 /* 05-correction.wav */; };
+		9F0BD838C0E5CF9E6747A6B6 /* 04-names.wav in Resources */ = {isa = PBXBuildFile; fileRef = C0A7EC8EDB94FE53E44A834B /* 04-names.wav */; };
+		A5B5619DC0FB0E5DF48AFB6B /* 10-tech.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4E51AFEADBC936ACBB394A8C /* 10-tech.wav */; };
+		A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */; };
+		A90C4B0CFF4628FD67A2C8C9 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2EA2B24D2B0CA72BAFEC755 /* RootView.swift */; };
+		AEF61AC93ED443BD3B1ED5F7 /* 02-grocery.wav in Resources */ = {isa = PBXBuildFile; fileRef = 14901CF522EA76118D3A40C6 /* 02-grocery.wav */; };
+		B2376AC8C6A612234BD144E9 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C42A087C5C3A2719BB9A89 /* AppModel.swift */; };
+		B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */; };
+		B84B93A8023044A6C80CB826 /* TakiCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2B0A5FF77D9E5389EEB70EA /* TakiCore */; };
+		B998BE3BE29B09F3591751D3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C7B379DCACFD7D46658120 /* HomeView.swift */; };
+		BDD7A9E93217317B97A7AE09 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B4E02A1CBD6B296780E3F1 /* HistoryView.swift */; };
+		C0AA609061AFA027D3999110 /* 01-meeting.wav in Resources */ = {isa = PBXBuildFile; fileRef = 05D050FDCA1C18AD58E4AE94 /* 01-meeting.wav */; };
+		C3F9E4F88969C9E14001BA5D /* 09-filler.wav in Resources */ = {isa = PBXBuildFile; fileRef = 00D8CC7B11E1B22E364DA967 /* 09-filler.wav */; };
+		D370D380473F8D373034A227 /* TakiEngine in Frameworks */ = {isa = PBXBuildFile; productRef = CD25382AA40E2F2BF7425AE3 /* TakiEngine */; };
+		DB8258543534801EB3C9C0F8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADE909E73247F5651AC6F6B /* Theme.swift */; };
+		EEC4E177DA64FAD5EF83CF79 /* MicOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69D587B4CD2D7D6600C5A5E /* MicOrb.swift */; };
+		FF0E848E837511B890B399C3 /* TakiEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 23FC0BC7386225B934D00593 /* TakiEngine */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B8ADE7A8577F3DC43548583A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 05D45362154D012A47606833 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5D82971B5A976DD3C8301FEC;
+			remoteInfo = Taki;
+		};
+		E954CAAC3670DB240DFBC9B8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 05D45362154D012A47606833 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 47D53347CB08B6458D6C948E;
+			remoteInfo = TakiKeyboard;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6022EBF3C439912E0DAC9B16 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4C427C6AF64ADEEEC9CD2C54 /* TakiKeyboard.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00D8CC7B11E1B22E364DA967 /* 09-filler.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "09-filler.wav"; sourceTree = "<group>"; };
+		05D050FDCA1C18AD58E4AE94 /* 01-meeting.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "01-meeting.wav"; sourceTree = "<group>"; };
+		05D59FE14588322878E63472 /* debug-feed.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "debug-feed.wav"; sourceTree = "<group>"; };
+		14901CF522EA76118D3A40C6 /* 02-grocery.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "02-grocery.wav"; sourceTree = "<group>"; };
+		22A635D1134A25BC168BE9A8 /* AppSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSmokeTests.swift; sourceTree = "<group>"; };
+		25B4E02A1CBD6B296780E3F1 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
+		2A9F1719E535FE14EF5D4AA7 /* 06-question.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "06-question.wav"; sourceTree = "<group>"; };
+		2D0B57E87EB9F65B792E594E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2E59447675FCD34038383A13 /* 05-correction.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "05-correction.wav"; sourceTree = "<group>"; };
+		36B9134D9FE2D27DB9A3DCF9 /* 08-long.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "08-long.wav"; sourceTree = "<group>"; };
+		4ADE909E73247F5651AC6F6B /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		4E51AFEADBC936ACBB394A8C /* 10-tech.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "10-tech.wav"; sourceTree = "<group>"; };
+		59413675E546B8104318B673 /* 03-numbers.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "03-numbers.wav"; sourceTree = "<group>"; };
+		5DABA58368312162B17B94D1 /* LevelWaveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelWaveform.swift; sourceTree = "<group>"; };
+		610B795C2812D6D1A68E8D20 /* Taki.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Taki.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F6F6D5DE2B47F40C0D63565 /* clips.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = clips.json; sourceTree = "<group>"; };
+		7155E871C91ECB00AC950E5F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		7DD95466B3A1EB1690DCF9EA /* ASRAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRAccuracyTests.swift; sourceTree = "<group>"; };
+		84C7B379DCACFD7D46658120 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		87D2AE3889EF724ED1369137 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		92E549F156E576A078A54838 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		95C196B3D5A76156B0B97950 /* TakiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakiApp.swift; sourceTree = "<group>"; };
+		99F699E8D8D36AC5AF73C2C8 /* TakiTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TakiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardModel.swift; sourceTree = "<group>"; };
+		B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
+		BBD1496F6168C8822D122DD6 /* Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Records.swift; sourceTree = "<group>"; };
+		C065F207F9E55B5D1946FCA3 /* 07-address.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "07-address.wav"; sourceTree = "<group>"; };
+		C0A7EC8EDB94FE53E44A834B /* 04-names.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "04-names.wav"; sourceTree = "<group>"; };
+		C2EA2B24D2B0CA72BAFEC755 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		C435B80E73D53FA88970DF88 /* TakiKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TakiKit; path = Packages/TakiKit; sourceTree = SOURCE_ROOT; };
+		C6BB390068B50EC23063D41F /* DictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryView.swift; sourceTree = "<group>"; };
+		C9DD5C34656E136CD07CFC43 /* TakiKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TakiKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE6B853060F16E5A38CA458E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		D257B24A1BD0B377939F2C4E /* HotMicController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotMicController.swift; sourceTree = "<group>"; };
+		DFDC69F5568ED0AF4CA081AA /* CaptureContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureContext.swift; sourceTree = "<group>"; };
+		E1C42A087C5C3A2719BB9A89 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		E69D587B4CD2D7D6600C5A5E /* MicOrb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicOrb.swift; sourceTree = "<group>"; };
+		F1679D43871C77892F46E22E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B8DC2AE7044C648C4CE27542 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1CCBC79D8D2280027C01335E /* TakiCore in Frameworks */,
+				FF0E848E837511B890B399C3 /* TakiEngine in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0632B7D7163F6549E62C062 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4736807D786B008FA189AC82 /* TakiCore in Frameworks */,
+				D370D380473F8D373034A227 /* TakiEngine in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FE8580C12AC2E6B3DA3C721F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B84B93A8023044A6C80CB826 /* TakiCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		018ED4CD3AA40B88FB77030B /* Clips */ = {
+			isa = PBXGroup;
+			children = (
+				05D050FDCA1C18AD58E4AE94 /* 01-meeting.wav */,
+				14901CF522EA76118D3A40C6 /* 02-grocery.wav */,
+				59413675E546B8104318B673 /* 03-numbers.wav */,
+				C0A7EC8EDB94FE53E44A834B /* 04-names.wav */,
+				2E59447675FCD34038383A13 /* 05-correction.wav */,
+				2A9F1719E535FE14EF5D4AA7 /* 06-question.wav */,
+				C065F207F9E55B5D1946FCA3 /* 07-address.wav */,
+				36B9134D9FE2D27DB9A3DCF9 /* 08-long.wav */,
+				00D8CC7B11E1B22E364DA967 /* 09-filler.wav */,
+				4E51AFEADBC936ACBB394A8C /* 10-tech.wav */,
+				6F6F6D5DE2B47F40C0D63565 /* clips.json */,
+			);
+			path = Clips;
+			sourceTree = "<group>";
+		};
+		0592E0074672444F99891750 /* TakiTests */ = {
+			isa = PBXGroup;
+			children = (
+				22A635D1134A25BC168BE9A8 /* AppSmokeTests.swift */,
+				7DD95466B3A1EB1690DCF9EA /* ASRAccuracyTests.swift */,
+				018ED4CD3AA40B88FB77030B /* Clips */,
+			);
+			path = TakiTests;
+			sourceTree = "<group>";
+		};
+		05FE842716255ED44BE184BB /* App */ = {
+			isa = PBXGroup;
+			children = (
+				E1C42A087C5C3A2719BB9A89 /* AppModel.swift */,
+				2D0B57E87EB9F65B792E594E /* Assets.xcassets */,
+				87D2AE3889EF724ED1369137 /* Info.plist */,
+				BBD1496F6168C8822D122DD6 /* Records.swift */,
+				95C196B3D5A76156B0B97950 /* TakiApp.swift */,
+				768D55870A4911254921F68C /* HotMic */,
+				674F74C719DCF4AE742D77CB /* Resources */,
+				46D46F8FF84A15E47BCAEBB0 /* Views */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		3DDCE092FFDCDAB9F019FD2C /* Keyboard */ = {
+			isa = PBXGroup;
+			children = (
+				F1679D43871C77892F46E22E /* Info.plist */,
+				AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */,
+				B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */,
+				275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */,
+			);
+			path = Keyboard;
+			sourceTree = "<group>";
+		};
+		46D46F8FF84A15E47BCAEBB0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C6BB390068B50EC23063D41F /* DictionaryView.swift */,
+				25B4E02A1CBD6B296780E3F1 /* HistoryView.swift */,
+				84C7B379DCACFD7D46658120 /* HomeView.swift */,
+				7155E871C91ECB00AC950E5F /* OnboardingView.swift */,
+				C2EA2B24D2B0CA72BAFEC755 /* RootView.swift */,
+				CE6B853060F16E5A38CA458E /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		49390AEF3A330FC4C78E0447 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				5DABA58368312162B17B94D1 /* LevelWaveform.swift */,
+				E69D587B4CD2D7D6600C5A5E /* MicOrb.swift */,
+				4ADE909E73247F5651AC6F6B /* Theme.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		4CB5FF897AA6BED0D0F4552B /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				92E549F156E576A078A54838 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		545AED9075B413A3AF19CE04 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				0592E0074672444F99891750 /* TakiTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		5BDA131DD3C0F8C7030310A3 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				C435B80E73D53FA88970DF88 /* TakiKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		674F74C719DCF4AE742D77CB /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				05D59FE14588322878E63472 /* debug-feed.wav */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		768D55870A4911254921F68C /* HotMic */ = {
+			isa = PBXGroup;
+			children = (
+				DFDC69F5568ED0AF4CA081AA /* CaptureContext.swift */,
+				D257B24A1BD0B377939F2C4E /* HotMicController.swift */,
+			);
+			path = HotMic;
+			sourceTree = "<group>";
+		};
+		793485498FF3989687872743 = {
+			isa = PBXGroup;
+			children = (
+				05FE842716255ED44BE184BB /* App */,
+				4CB5FF897AA6BED0D0F4552B /* Config */,
+				3DDCE092FFDCDAB9F019FD2C /* Keyboard */,
+				5BDA131DD3C0F8C7030310A3 /* Packages */,
+				49390AEF3A330FC4C78E0447 /* Shared */,
+				545AED9075B413A3AF19CE04 /* Tests */,
+				9FD0C7EAA1665C7B5D40F9F2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9FD0C7EAA1665C7B5D40F9F2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				610B795C2812D6D1A68E8D20 /* Taki.app */,
+				C9DD5C34656E136CD07CFC43 /* TakiKeyboard.appex */,
+				99F699E8D8D36AC5AF73C2C8 /* TakiTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		087373CBF2DFD4130880AEFF /* TakiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 79597842764E791A5920F324 /* Build configuration list for PBXNativeTarget "TakiTests" */;
+			buildPhases = (
+				D285FDC73F49C7C8C76254B1 /* Sources */,
+				9C972A13256214E59A889948 /* Resources */,
+				B8DC2AE7044C648C4CE27542 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F073FAB48427B65E37D23C57 /* PBXTargetDependency */,
+			);
+			name = TakiTests;
+			packageProductDependencies = (
+				EEBDA32635A472C84EDBD228 /* TakiCore */,
+				23FC0BC7386225B934D00593 /* TakiEngine */,
+			);
+			productName = TakiTests;
+			productReference = 99F699E8D8D36AC5AF73C2C8 /* TakiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		47D53347CB08B6458D6C948E /* TakiKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CE2A048273EF21BC22816691 /* Build configuration list for PBXNativeTarget "TakiKeyboard" */;
+			buildPhases = (
+				BAE8A12093B46F20EF290235 /* Sources */,
+				FE8580C12AC2E6B3DA3C721F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TakiKeyboard;
+			packageProductDependencies = (
+				D2B0A5FF77D9E5389EEB70EA /* TakiCore */,
+			);
+			productName = TakiKeyboard;
+			productReference = C9DD5C34656E136CD07CFC43 /* TakiKeyboard.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		5D82971B5A976DD3C8301FEC /* Taki */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5165A72BB21A78E2A2B9F5D9 /* Build configuration list for PBXNativeTarget "Taki" */;
+			buildPhases = (
+				22DD67124D7FAE73C30F882E /* Sources */,
+				1A66B305E1852868EBCDEEAD /* Resources */,
+				F0632B7D7163F6549E62C062 /* Frameworks */,
+				6022EBF3C439912E0DAC9B16 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				75E33F9803342B4FD4AF8CB3 /* PBXTargetDependency */,
+			);
+			name = Taki;
+			packageProductDependencies = (
+				AA65D54A46761847FC9008B8 /* TakiCore */,
+				CD25382AA40E2F2BF7425AE3 /* TakiEngine */,
+			);
+			productName = Taki;
+			productReference = 610B795C2812D6D1A68E8D20 /* Taki.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		05D45362154D012A47606833 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					087373CBF2DFD4130880AEFF = {
+						DevelopmentTeam = 8FGG5DR669;
+						ProvisioningStyle = Automatic;
+					};
+					47D53347CB08B6458D6C948E = {
+						DevelopmentTeam = 8FGG5DR669;
+						ProvisioningStyle = Automatic;
+					};
+					5D82971B5A976DD3C8301FEC = {
+						DevelopmentTeam = 8FGG5DR669;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 81E71179E521F63C4D167656 /* Build configuration list for PBXProject "Taki" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 793485498FF3989687872743;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A73398A640E3230F1002BAF6 /* XCLocalSwiftPackageReference "Packages/TakiKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9FD0C7EAA1665C7B5D40F9F2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5D82971B5A976DD3C8301FEC /* Taki */,
+				47D53347CB08B6458D6C948E /* TakiKeyboard */,
+				087373CBF2DFD4130880AEFF /* TakiTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A66B305E1852868EBCDEEAD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C3EEA317459C2CEDBA8AB6C /* Assets.xcassets in Resources */,
+				61B5E106CD0E7B91171FB81D /* debug-feed.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9C972A13256214E59A889948 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0AA609061AFA027D3999110 /* 01-meeting.wav in Resources */,
+				AEF61AC93ED443BD3B1ED5F7 /* 02-grocery.wav in Resources */,
+				0119A23A640B812AE2280E38 /* 03-numbers.wav in Resources */,
+				9F0BD838C0E5CF9E6747A6B6 /* 04-names.wav in Resources */,
+				68E3CAE3AB7DDE1FDA2A45E2 /* 05-correction.wav in Resources */,
+				18598000BCE542A92CD41630 /* 06-question.wav in Resources */,
+				4429CC858C63679BD3BCA409 /* 07-address.wav in Resources */,
+				378F2F0DCDC49F6B9EA9634E /* 08-long.wav in Resources */,
+				C3F9E4F88969C9E14001BA5D /* 09-filler.wav in Resources */,
+				A5B5619DC0FB0E5DF48AFB6B /* 10-tech.wav in Resources */,
+				36C9794A43224A14F8B5A4C9 /* clips.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		22DD67124D7FAE73C30F882E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2376AC8C6A612234BD144E9 /* AppModel.swift in Sources */,
+				53F1640608AD1A46CD365303 /* CaptureContext.swift in Sources */,
+				5D6ED4B45D2AF7AC42232D91 /* DictionaryView.swift in Sources */,
+				BDD7A9E93217317B97A7AE09 /* HistoryView.swift in Sources */,
+				B998BE3BE29B09F3591751D3 /* HomeView.swift in Sources */,
+				58ED84D06F460C924973F7C2 /* HotMicController.swift in Sources */,
+				5424094AEC9174B351325F51 /* LevelWaveform.swift in Sources */,
+				612750C4388AFAAD0179AF0C /* MicOrb.swift in Sources */,
+				01BE43EA57509E2622941563 /* OnboardingView.swift in Sources */,
+				562A4D8B79EA22C9DB92DFF5 /* Records.swift in Sources */,
+				A90C4B0CFF4628FD67A2C8C9 /* RootView.swift in Sources */,
+				3F00F2FD0028E55A8DAF10DC /* SettingsView.swift in Sources */,
+				199BEBF128B57DD056B69C97 /* TakiApp.swift in Sources */,
+				31BD358BB3ACD4B150F786D3 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BAE8A12093B46F20EF290235 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */,
+				0356564E2231A273C9657781 /* KeyboardView.swift in Sources */,
+				A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */,
+				0C2E3C351E823616B039F551 /* LevelWaveform.swift in Sources */,
+				EEC4E177DA64FAD5EF83CF79 /* MicOrb.swift in Sources */,
+				DB8258543534801EB3C9C0F8 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D285FDC73F49C7C8C76254B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3DD3DF2EF37E7313114AB6C2 /* ASRAccuracyTests.swift in Sources */,
+				6698DACFE3EECE044E39FD1C /* AppSmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		75E33F9803342B4FD4AF8CB3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 47D53347CB08B6458D6C948E /* TakiKeyboard */;
+			targetProxy = E954CAAC3670DB240DFBC9B8 /* PBXContainerItemProxy */;
+		};
+		F073FAB48427B65E37D23C57 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5D82971B5A976DD3C8301FEC /* Taki */;
+			targetProxy = B8ADE7A8577F3DC43548583A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1E720907E8A47B2809634CA1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 92E549F156E576A078A54838 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		2C06E747E77F59B704068BAD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/TakiKeyboard.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Keyboard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Taki;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_KEYBOARD_BUNDLE_ID)";
+				PRODUCT_NAME = TakiKeyboard;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		312671C9AA43A23FED2B3873 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/Taki.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Taki;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Taki listens only while you dictate. Speech is turned into text on this iPhone and never leaves it.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID)";
+				PRODUCT_NAME = Taki;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		66FE0B0D58B4773F2BA18565 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID).tests";
+				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Taki.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Taki";
+			};
+			name = Debug;
+		};
+		859D29BB8E989B7FD6C7B401 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/Taki.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				EXCLUDED_SOURCE_FILE_NAMES = "debug-feed.wav";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Taki;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Taki listens only while you dictate. Speech is turned into text on this iPhone and never leaves it.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID)";
+				PRODUCT_NAME = Taki;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A8828E7A5948E25D556F2E86 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 92E549F156E576A078A54838 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BFFEF0E1472D34681226D49A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID).tests";
+				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Taki.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Taki";
+			};
+			name = Release;
+		};
+		C72B20F72A966AD43626152C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/TakiKeyboard.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Keyboard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Taki;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_KEYBOARD_BUNDLE_ID)";
+				PRODUCT_NAME = TakiKeyboard;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5165A72BB21A78E2A2B9F5D9 /* Build configuration list for PBXNativeTarget "Taki" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				312671C9AA43A23FED2B3873 /* Debug */,
+				859D29BB8E989B7FD6C7B401 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		79597842764E791A5920F324 /* Build configuration list for PBXNativeTarget "TakiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66FE0B0D58B4773F2BA18565 /* Debug */,
+				BFFEF0E1472D34681226D49A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		81E71179E521F63C4D167656 /* Build configuration list for PBXProject "Taki" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A8828E7A5948E25D556F2E86 /* Debug */,
+				1E720907E8A47B2809634CA1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CE2A048273EF21BC22816691 /* Build configuration list for PBXNativeTarget "TakiKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2C06E747E77F59B704068BAD /* Debug */,
+				C72B20F72A966AD43626152C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A73398A640E3230F1002BAF6 /* XCLocalSwiftPackageReference "Packages/TakiKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TakiKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		23FC0BC7386225B934D00593 /* TakiEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TakiEngine;
+		};
+		AA65D54A46761847FC9008B8 /* TakiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TakiCore;
+		};
+		CD25382AA40E2F2BF7425AE3 /* TakiEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TakiEngine;
+		};
+		D2B0A5FF77D9E5389EEB70EA /* TakiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TakiCore;
+		};
+		EEBDA32635A472C84EDBD228 /* TakiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TakiCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 05D45362154D012A47606833 /* Project object */;
+}

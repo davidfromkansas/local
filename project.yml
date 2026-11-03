@@ -1,0 +1,135 @@
+name: Taki
+options:
+  bundleIdPrefix: com.davidfromkansas
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_STYLE: Automatic
+packages:
+  TakiKit:
+    path: Packages/TakiKit
+targets:
+  Taki:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes: ["**/*.md"]
+      - path: Shared
+    dependencies:
+      - package: TakiKit
+        product: TakiCore
+      - package: TakiKit
+        product: TakiEngine
+      - target: TakiKeyboard
+        embed: true
+    entitlements:
+      path: Config/Taki.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(TAKI_APP_GROUP)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_BUNDLE_ID)
+        PRODUCT_NAME: Taki
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Taki
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Taki listens only while you dictate. Speech is turned into text on this iPhone and never leaves it.
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+      configs:
+        Release:
+          EXCLUDED_SOURCE_FILE_NAMES: "debug-feed.wav"
+    info:
+      path: App/Info.plist
+      properties:
+        TakiAppGroup: $(TAKI_APP_GROUP)
+        UIBackgroundModes: [audio]
+        CFBundleURLTypes:
+          - CFBundleURLName: $(TAKI_BUNDLE_ID)
+            CFBundleURLSchemes: [taki]
+  TakiKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Keyboard
+      - path: Shared
+    dependencies:
+      - package: TakiKit
+        product: TakiCore
+    entitlements:
+      path: Config/TakiKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(TAKI_APP_GROUP)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_KEYBOARD_BUNDLE_ID)
+        PRODUCT_NAME: TakiKeyboard
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Taki
+        APPLICATION_EXTENSION_API_ONLY: YES
+    info:
+      path: Keyboard/Info.plist
+      properties:
+        CFBundleDisplayName: Taki
+        TakiAppGroup: $(TAKI_APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: en-US
+            RequestsOpenAccess: true
+  TakiTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/TakiTests
+    dependencies:
+      - target: Taki
+      - package: TakiKit
+        product: TakiCore
+      - package: TakiKit
+        product: TakiEngine
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_BUNDLE_ID).tests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Taki.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Taki
+        BUNDLE_LOADER: $(TEST_HOST)
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+schemes:
+  Taki:
+    build:
+      targets:
+        Taki: all
+        TakiKeyboard: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - TakiTests
+        - package: TakiKit/TakiCoreTests
+    archive:
+      config: Release
