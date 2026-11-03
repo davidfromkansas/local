@@ -2,6 +2,7 @@ import AVFoundation
 import Observation
 import TakiCore
 import TakiEngine
+import UIKit
 
 /// The "hot mic": keeps an AVAudioEngine running (armed) so the app stays alive in the
 /// background, and flips to capturing when the keyboard asks over Darwin notifications.
@@ -21,6 +22,7 @@ final class HotMicController {
     @ObservationIgnored private let capture: CaptureContext
     @ObservationIgnored private var audioEngine: AVAudioEngine?
     @ObservationIgnored private var silentPlayer: AVAudioPlayerNode?
+    @ObservationIgnored private var debugBackgroundTask: UIBackgroundTaskIdentifier = .invalid
     @ObservationIgnored private var listener: Task<Void, Never>?
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var captureStartedAt: Date?
@@ -48,6 +50,10 @@ final class HotMicController {
         if machine.handle(.activate(now: .now)) == .startEngine {
             do {
                 try startAudio()
+            } catch where Self.debugFeedEnabled {
+                // Simulator on a Mac with no audio hardware: run the session on the test feed alone.
+                discardAudioEngine()
+                beginDebugBackgroundTask()
             } catch {
                 lastError = "Couldn't start the microphone: \(error.localizedDescription)"
                 _ = machine.handle(.end)
@@ -209,11 +215,13 @@ final class HotMicController {
 
     private func startSilentKeepAlive(on audioEngine: AVAudioEngine) throws {
         let player = AVAudioPlayerNode()
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1),
-              let silence = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000) else {
+        let mixerFormat = audioEngine.mainMixerNode.outputFormat(forBus: 0)
+        guard mixerFormat.sampleRate > 0,
+              let format = AVAudioFormat(standardFormatWithSampleRate: mixerFormat.sampleRate, channels: 1),
+              let silence = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(mixerFormat.sampleRate)) else {
             throw HotMicError.noMicrophone
         }
-        silence.frameLength = 16_000
+        silence.frameLength = silence.frameCapacity
         audioEngine.attach(player)
         audioEngine.connect(player, to: audioEngine.mainMixerNode, format: format)
         player.scheduleBuffer(silence, at: nil, options: .loops)
@@ -228,9 +236,31 @@ final class HotMicController {
         #endif
     }
 
+    private func discardAudioEngine() {
+        silentPlayer?.stop()
+        silentPlayer = nil
+        audioEngine?.stop()
+        audioEngine = nil
+    }
+
+    /// DEBUG only: without a running audio engine iOS would suspend us in the background.
+    private func beginDebugBackgroundTask() {
+        guard debugBackgroundTask == .invalid else { return }
+        debugBackgroundTask = UIApplication.shared.beginBackgroundTask(withName: "TakiDebugFeed") { [weak self] in
+            self?.endDebugBackgroundTask()
+        }
+    }
+
+    private func endDebugBackgroundTask() {
+        guard debugBackgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(debugBackgroundTask)
+        debugBackgroundTask = .invalid
+    }
+
     private func stopAudio() {
         ticker?.cancel()
         ticker = nil
+        endDebugBackgroundTask()
         if silentPlayer == nil { audioEngine?.inputNode.removeTap(onBus: 0) }
         silentPlayer?.stop()
         silentPlayer = nil
