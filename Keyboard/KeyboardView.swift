@@ -14,7 +14,7 @@ struct KeyboardView: View {
             statusStrip
                 .frame(height: 34)
             GeometryReader { proxy in
-                let unit = (proxy.size.width - spacing * 9 - 6) / 10
+                let unit = max(0, (proxy.size.width - spacing * 9 - 6) / 10)
                 VStack(spacing: 11) {
                     keyRow(rows[0], unit: unit)
                     keyRow(rows[1], unit: unit)
@@ -185,13 +185,23 @@ private struct PressScaleKeyStyle: ButtonStyle {
 
 // MARK: - Keys
 
+/// UIKit resolves dynamic colors off the main thread, so the providers must not be MainActor-isolated.
+private enum KeyPalette {
+    static let character = Color(uiColor: dynamic(light: .white, dark: UIColor(white: 0.42, alpha: 1)))
+    static let function = Color(uiColor: dynamic(light: UIColor(red: 0.67, green: 0.69, blue: 0.74, alpha: 1), dark: UIColor(white: 0.27, alpha: 1)))
+
+    nonisolated private static func dynamic(light: UIColor, dark: UIColor) -> UIColor {
+        UIColor { $0.userInterfaceStyle == .dark ? dark : light }
+    }
+}
+
 enum KeyKind {
     case character, function, active
 
     var fill: Color {
         switch self {
-        case .character, .active: Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.42, alpha: 1) : .white })
-        case .function: Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.27, alpha: 1) : UIColor(red: 0.67, green: 0.69, blue: 0.74, alpha: 1) })
+        case .character, .active: KeyPalette.character
+        case .function: KeyPalette.function
         }
     }
 
