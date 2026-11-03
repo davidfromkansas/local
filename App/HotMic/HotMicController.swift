@@ -28,6 +28,15 @@ final class HotMicController {
     @ObservationIgnored private var lastHeartbeat = Date.distantPast
     @ObservationIgnored private var captureStartedAt: Date?
     @ObservationIgnored private var feedSamples: [Float]?
+    /// Live transcription of the dictation in progress.
+    @ObservationIgnored private var live: LiveTranscriber?
+    @ObservationIgnored private var liveTask: Task<Void, Never>?
+    /// How many captured samples have been handed to `live`.
+    @ObservationIgnored private var liveSampleCount = 0
+    @ObservationIgnored private var liveRequestID: UUID?
+
+    /// Pause between live transcription passes (each pass also waits for the previous one).
+    static let livePassInterval: Duration = .milliseconds(300)
 
     /// Longest single dictation we accumulate before stopping automatically.
     static let maxCaptureSeconds: Double = 5 * 60
@@ -69,7 +78,10 @@ final class HotMicController {
     }
 
     func endSession() {
-        if machine.phase == .capturing { _ = capture.finish() }
+        if machine.phase == .capturing {
+            _ = capture.finish()
+            stopLiveTranscription()
+        }
         _ = machine.handle(.end)
         stopAudio()
         publish()
@@ -89,6 +101,7 @@ final class HotMicController {
             captureStartedAt = .now
             feedSamples = loadDebugFeedIfEnabled()
             capture.begin()
+            startLiveTranscription()
         case .stopEngine:
             stopAudio()
         default:
@@ -99,20 +112,29 @@ final class HotMicController {
 
     func stopCapture() {
         guard machine.handle(.stopCapture) == .finishCapture else { return }
-        var samples = capture.finish()
-        if let feed = feedSamples {
-            samples = feed
-            feedSamples = nil
-        }
+        let captured = capture.finish()
+        let samples = feedSamples ?? captured
+        // Only the audio the live transcriber hasn't seen yet.
+        let rest = liveSampleCount < samples.count ? Array(samples[liveSampleCount...]) : []
+        let transcriber = live ?? LiveTranscriber(engine: engine)
+        let lastPass = liveTask
+        let requestID = liveRequestID ?? store.readRequest()?.id
+        stopLiveTranscription()
+        feedSamples = nil
         captureStartedAt = nil
         level = 0
         publish()
-        Task { await process(samples) }
+        Task {
+            await lastPass?.value  // its audio goes in before `rest`
+            await transcriber.append(rest)
+            await process(transcriber, requestID: requestID, audioSeconds: Double(samples.count) / 16_000)
+        }
     }
 
     func cancelCapture() {
         if machine.handle(.cancelCapture(now: .now)) == .discardCapture {
             _ = capture.finish()
+            stopLiveTranscription()
             feedSamples = nil
             captureStartedAt = nil
             level = 0
@@ -120,28 +142,114 @@ final class HotMicController {
         publish()
     }
 
-    private func process(_ samples: [Float]) async {
-        let requestID = store.readRequest()?.id
-        var errorMessage: String?
+    /// Final pass. The words are already in the text field from the live passes, so this only
+    /// transcribes the last moment of audio, applies the instant rules cleanup and hands the text
+    /// over right away. The slower Foundation Models polish runs afterwards and, if it changes
+    /// anything, sends a revision that the keyboard swaps in.
+    private func process(_ transcriber: LiveTranscriber, requestID: UUID?, audioSeconds: Double) async {
+        let clock = ContinuousClock()
         do {
             try await engine.prepare(modelChoice())
-            let pipeline = DictationPipeline(
-                engine: engine,
-                dictionary: dictionaryProvider(),
-                cleanupEnabled: UserDefaults.standard.bool(forKey: SettingsKey.cleanup)
-            )
-            let output = try await pipeline.run(samples)
-            lastText = output.text
-            store.write(DictationResult(requestID: requestID, text: output.text))
-            if !output.text.isEmpty { onFinished(output) }
+            let pipeline = makePipeline()
+            let asrStart = clock.now
+            let raw = try await transcriber.transcribe(final: true)
+            let asrTime = asrStart.duration(to: clock.now)
+
+            let quick = pipeline.quickClean(raw)
+            lastText = quick
+            store.write(DictationResult(requestID: requestID, text: quick))
+            DarwinNotifications.post(.resultReady)
+            _ = machine.handle(.processingFinished(now: .now))
+            publish()
+
+            let polishStart = clock.now
+            let polished = await pipeline.polish(quick)
+            let polishTime = polishStart.duration(to: clock.now)
+            if let polished, polished != quick {
+                lastText = polished
+                store.write(DictationResult(requestID: requestID, text: polished))
+                DarwinNotifications.post(.resultReady)
+            }
+            let text = polished ?? quick
+            guard !text.isEmpty else { return }
+            onFinished(DictationOutput(
+                rawText: raw, text: text, audioSeconds: audioSeconds,
+                asrSeconds: Self.seconds(asrTime), cleanupSeconds: Self.seconds(polishTime),
+                usedLanguageModel: polished != nil
+            ))
         } catch {
-            errorMessage = error.localizedDescription
-            lastError = errorMessage
+            lastError = error.localizedDescription
             store.write(DictationResult(requestID: requestID, text: ""))
+            DarwinNotifications.post(.resultReady)
+            _ = machine.handle(.processingFinished(now: .now))
+            publish(error: error.localizedDescription)
         }
-        DarwinNotifications.post(.resultReady)
-        _ = machine.handle(.processingFinished(now: .now))
-        publish(error: errorMessage)
+    }
+
+    private func makePipeline() -> DictationPipeline {
+        DictationPipeline(
+            engine: engine,
+            dictionary: dictionaryProvider(),
+            cleanupEnabled: UserDefaults.standard.bool(forKey: SettingsKey.cleanup)
+        )
+    }
+
+    private static func seconds(_ duration: Duration) -> Double {
+        Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+    }
+
+    // MARK: - Live text
+
+    /// While capturing, re-transcribe every few hundred ms and publish the text so the keyboard
+    /// can type it into the field as the user speaks.
+    private func startLiveTranscription() {
+        stopLiveTranscription()
+        let transcriber = LiveTranscriber(engine: engine)
+        let requestID = store.readRequest()?.id
+        let pipeline = makePipeline()
+        live = transcriber
+        liveRequestID = requestID
+        liveSampleCount = 0
+        liveTask = Task { [weak self] in
+            var published = ""
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.livePassInterval)
+                guard let self, !Task.isCancelled else { return }
+                let audio = newLiveAudio()
+                guard !audio.isEmpty else { continue }
+                await transcriber.append(audio)
+                guard !Task.isCancelled else { return }
+                guard let raw = try? await transcriber.transcribe() else { continue }
+                // Stopped or cancelled meanwhile: the final pass owns the text now.
+                guard !Task.isCancelled, live === transcriber else { return }
+                let text = pipeline.quickClean(raw)
+                guard text != published else { continue }
+                published = text
+                store.writePartial(DictationResult(requestID: requestID, text: text))
+                DarwinNotifications.post(.partialReady)
+            }
+        }
+    }
+
+    private func stopLiveTranscription() {
+        liveTask?.cancel()
+        liveTask = nil
+        live = nil
+        liveRequestID = nil
+    }
+
+    /// Captured audio the live transcriber hasn't seen yet. With the DEBUG feed, the part of the
+    /// file that would have been spoken by now.
+    private func newLiveAudio() -> [Float] {
+        let audio: [Float]
+        if let feed = feedSamples, let started = captureStartedAt {
+            let end = min(feed.count, Int(Date.now.timeIntervalSince(started) * 16_000))
+            audio = liveSampleCount < end ? Array(feed[liveSampleCount..<end]) : []
+        } else {
+            audio = capture.samples(from: liveSampleCount)
+        }
+        liveSampleCount += audio.count
+        return audio
     }
 
     // MARK: - IPC
@@ -161,7 +269,7 @@ final class HotMicController {
                 case .start: startCapture()
                 case .stop: stopCapture()
                 case .cancel: cancelCapture()
-                case .resultReady, .stateChanged: break
+                case .resultReady, .partialReady, .stateChanged: break
                 }
             }
         }

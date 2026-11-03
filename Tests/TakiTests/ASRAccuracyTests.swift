@@ -63,6 +63,51 @@ struct ASRAccuracyTests {
 
         #expect(rawTotal / count < 0.15)
     }
+
+    /// Plays every clip back to back (with short pauses) through the live transcriber the way the
+    /// hot mic does: small chunks, a live pass after each, then the final pass. Long enough to make
+    /// the transcriber cut and keep earlier speech, so this checks the stitched text stays accurate.
+    @Test(.enabled(if: ASRAccuracyTests.enabled), .timeLimit(.minutes(30)))
+    func liveTranscriptionMatchesBatch() async throws {
+        let bundle = Bundle(for: BundleToken.self)
+        let manifest = try #require(bundle.url(forResource: "clips", withExtension: "json"))
+        let clips = try JSONDecoder().decode([Clip].self, from: Data(contentsOf: manifest))
+        let engine = TranscriptionEngine()
+        try await engine.prepare(.parakeetUnified)
+
+        var audio: [Float] = []
+        for clip in clips {
+            let url = try #require(bundle.url(forResource: clip.file, withExtension: nil))
+            audio += try AudioFile.load16kMono(url)
+            audio += [Float](repeating: 0, count: 12_800)  // 0.8 s pause
+        }
+        let reference = clips.map(\.reference).joined(separator: " ")
+
+        let live = LiveTranscriber(engine: engine)
+        let chunk = 4_800  // 0.3 s
+        var passes = 0
+        var lastPartial = ""
+        for start in stride(from: 0, to: audio.count, by: chunk) {
+            await live.append(Array(audio[start..<min(audio.count, start + chunk)]))
+            if start / chunk % 3 == 0 {  // a pass every ~0.9 s of audio, like a slow device
+                lastPartial = try await live.transcribe()
+                passes += 1
+            }
+        }
+        let clock = ContinuousClock()
+        var final = ""
+        let finalLatency = try await clock.measure { final = try await live.transcribe(final: true) }
+
+        let liveWER = WordErrorRate.compute(reference: reference, hypothesis: final)
+        let batchWER = WordErrorRate.compute(reference: reference, hypothesis: try await engine.transcribe(audio))
+        print(String(
+            format: "TAKI-ASR| live: %.1fs audio, %d passes, final pass %.2fs, live WER %.1f%%, batch WER %.1f%%",
+            Double(audio.count) / 16_000, passes, finalLatency.seconds, liveWER * 100, batchWER * 100
+        ))
+        print("TAKI-ASR| last live text: \(lastPartial)")
+        print("TAKI-ASR| final text: \(final)")
+        #expect(liveWER < batchWER + 0.05)
+    }
 }
 
 private extension Duration {

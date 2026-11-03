@@ -144,17 +144,14 @@ private struct MicKey: View {
                     .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
                     .scaleEffect(state == .recording && !reduceMotion ? 1 + CGFloat(level) * 0.08 : 1)
                     .animation(.easeOut(duration: 0.08), value: level)
-                Group {
-                    if state == .processing {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: state == .recording ? "mic.fill" : "mic")
-                            .font(.system(size: 19, weight: .medium))
-                            .foregroundStyle(iconColor)
-                            .contentTransition(.symbolEffect(.replace))
-                    }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                // No spinner while finishing: the words are already in the field, so the mic just
+                // breathes softly until the final text lands.
+                Image(systemName: state == .recording ? "mic.fill" : "mic")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(iconColor)
+                    .opacity(state == .processing ? 0.5 : 1)
+                    .symbolEffect(.pulse, options: .repeating, isActive: state == .processing && !reduceMotion)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())

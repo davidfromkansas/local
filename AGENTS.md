@@ -19,17 +19,20 @@ Keyboard extensions **cannot use the microphone** and have a tight memory limit 
 
 1. Keyboard mic tap with no live session → opens `taki://start` (SwiftUI `openURL` from the keyboard view; requires Full Access).
 2. App (`HotMicController`) activates `AVAudioSession(.playAndRecord, .measurement, [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker])`, starts `AVAudioEngine` with an input tap in **armed** mode (buffers dropped). `UIBackgroundModes=audio` keeps it alive in the background. Shows "Swipe back to continue". Session stays on until the user ends it (default "Never"; an idle timeout can be set in Settings).
-3. Next keyboard taps post Darwin notifications `start`/`stop`; app flips to **capturing** (16 kHz mono Float32 via `CaptureContext`, on the audio thread), on stop runs VAD → ASR → cleanup, writes the result, posts `resultReady`; keyboard inserts it.
+3. Next keyboard taps post Darwin notifications `start`/`stop`; app flips to **capturing** (16 kHz mono Float32 via `CaptureContext`, on the audio thread).
+4. **Live text**: while capturing, `LiveTranscriber` re-transcribes every ~300 ms and the app writes `partial.json` + posts `partialReady`; the keyboard types it into the field and edits only the changed ending (`TextEdit`). Older speech is cut at a pause (`SpeechSegmenter`, 8–14 s) and kept, so each pass only re-runs the newest < 15 s (one encoder window).
+5. On stop: final pass over the last bit of audio → rules cleanup → `result.json` + `resultReady` → back to armed right away. Then the Foundation Models polish runs; if it changes the text, a second `result.json` for the same request replaces it in the field. The keyboard only edits text that still sits right before the cursor.
 
 States are a pure value type: `SessionMachine` (inactive → armed → capturing → processing → armed). Keyboard shows `KeyboardUIState` notReady / ready / recording / processing.
 
 Keyboard layout (`Keyboard/KeyboardView.swift`): full QWERTY + 123/#+= layers, auto-capitalize, double-space period. The Taki mic is a key in the **lower-right corner**: tap → it lights up red while dictating, tap again → text is inserted and the letters stay. David's spec — keep it that way.
 
 ## IPC protocol (App Group `group.com.davidfromkansas.taki`)
-Darwin notifications carry **no payload**, only names `com.davidfromkansas.taki.<signal>`: `start`, `stop`, `cancel` (keyboard → app), `stateChanged`, `resultReady` (app → keyboard). Data is atomic files in the App Group container (`SharedStore`; files, not UserDefaults, for cross-process freshness):
+Darwin notifications carry **no payload**, only names `com.davidfromkansas.taki.<signal>`: `start`, `stop`, `cancel` (keyboard → app), `stateChanged`, `partialReady`, `resultReady` (app → keyboard). Data is atomic files in the App Group container (`SharedStore`; files, not UserDefaults, for cross-process freshness):
 - `session.json` — `SessionSnapshot` {phase, expiresAt, updatedAt, errorMessage}
 - `request.json` — `DictationRequest` {id} written by the keyboard before `start`
-- `result.json` — `DictationResult` {requestID, text}; keyboard only inserts when `requestID` matches its pending request (no double inserts)
+- `partial.json` — `DictationResult` with live text while capturing
+- `result.json` — `DictationResult` {requestID, text}: the final text, then maybe a polished revision; keyboard only edits for its own `requestID`
 - `level.bin` — current mic level (Float32 0…1, ~30 Hz) for the keyboard waveform
 - `debug-feed.wav` — optional DEBUG audio override (see below)
 
