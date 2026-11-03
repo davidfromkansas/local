@@ -18,7 +18,7 @@ final class KeyboardViewController: UIInputViewController {
         addChild(host)
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
-        let height = view.heightAnchor.constraint(equalToConstant: 236)
+        let height = view.heightAnchor.constraint(equalToConstant: 262)
         height.priority = .defaultHigh
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -36,6 +36,11 @@ final class KeyboardViewController: UIInputViewController {
         model.hasFullAccess = hasFullAccess
         model.showsGlobeKey = needsInputModeSwitchKey
         model.start()
+    }
+
+    override func textDidChange(_ textInput: (any UITextInput)?) {
+        super.textDidChange(textInput)
+        model.textDidChange()
     }
 
     override func viewDidDisappear(_ animated: Bool) {

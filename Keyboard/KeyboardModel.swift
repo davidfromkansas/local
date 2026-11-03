@@ -11,6 +11,11 @@ final class KeyboardModel {
     private(set) var notice: String?
     var hasFullAccess = true
     var showsGlobeKey = true
+    var layer: KeyLayer = .letters
+    private(set) var shift: ShiftState = .on
+
+    enum KeyLayer { case letters, numbers, symbols }
+    enum ShiftState { case off, on, locked }
 
     @ObservationIgnored var insertText: (String) -> Void = { _ in }
     @ObservationIgnored var deleteBackward: () -> Void = {}
@@ -24,10 +29,12 @@ final class KeyboardModel {
     /// While waiting for the app to confirm a tap, keep the optimistic state on screen.
     @ObservationIgnored private var optimistic: (state: KeyboardUIState, until: Date)?
     @ObservationIgnored private var noticeTask: Task<Void, Never>?
+    @ObservationIgnored private var lastShiftTap = Date.distantPast
 
     static let startURL = URL(string: "taki://start")!
 
     func start() {
+        updateAutoShift()
         refresh()
         deliverResultIfReady()
         listener?.cancel()
@@ -124,6 +131,66 @@ final class KeyboardModel {
             return
         }
         insertText(Self.spaced(text, after: contextBeforeInput()))
+        updateAutoShift()
+    }
+
+    // MARK: Typing
+
+    func type(_ key: String) {
+        insertText(layer == .letters && shift != .off ? key.uppercased() : key)
+        if shift == .on { shift = .off }
+        if key == "'" && layer != .letters { layer = .letters }
+    }
+
+    func space() {
+        let context = contextBeforeInput() ?? ""
+        if context.hasSuffix(" "), let previous = context.dropLast().last, previous.isLetter || previous.isNumber {
+            deleteBackward()
+            insertText(". ")
+        } else {
+            insertText(" ")
+        }
+        if layer != .letters { layer = .letters }
+        updateAutoShift()
+    }
+
+    func returnKey() {
+        insertText("\n")
+        updateAutoShift()
+    }
+
+    func delete() {
+        deleteBackward()
+        updateAutoShift()
+    }
+
+    /// Single tap toggles shift; a quick double tap locks caps.
+    func shiftTapped() {
+        let now = Date.now
+        if shift == .on && now.timeIntervalSince(lastShiftTap) < 0.35 {
+            shift = .locked
+        } else {
+            shift = shift == .off ? .on : .off
+        }
+        lastShiftTap = now
+    }
+
+    func textDidChange() {
+        updateAutoShift()
+    }
+
+    private func updateAutoShift() {
+        guard shift != .locked else { return }
+        shift = Self.shouldCapitalize(after: contextBeforeInput()) ? .on : .off
+    }
+
+    /// Sentence start: empty field, new line, or after ". " / "? " / "! ".
+    static func shouldCapitalize(after context: String?) -> Bool {
+        guard let context, let last = context.last else { return true }
+        if last.isNewline { return true }
+        guard last.isWhitespace else { return false }
+        guard let mark = context.trimmingCharacters(in: .whitespaces).last else { return true }
+        return ".!?".contains(mark) || mark.isNewline
     }
 
     /// Adds a leading space when dictating right after a word.
