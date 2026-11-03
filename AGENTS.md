@@ -51,7 +51,7 @@ scripts/testflight.sh          # archive + upload; needs ASC_KEY_ID, ASC_ISSUER_
 
 ## Gotchas
 - **Simulator has no Neural Engine** → ASR runs on CPU; latency there is not representative of an iPhone 17 Pro.
-- **The cloud Mac / simulator has no microphone.** DEBUG builds have Settings › Developer › "Use test audio instead of mic" (on by default in the simulator): capture plays `App/Resources/debug-feed.wav` (or `debug-feed.wav` in the App Group) instead of the mic. Excluded from Release.
+- **The simulator uses the Mac's microphone.** For machines without one (e.g. the cloud Mac), DEBUG builds have Settings › Developer › "Use test audio instead of mic" (off by default; turn it on there): capture plays `App/Resources/debug-feed.wav` (or `debug-feed.wav` in the App Group) instead of the mic. Excluded from Release.
 - Keyboard needs **Allow Full Access** for the App Group + Darwin notifications; without it the keyboard shows a hint.
 - Default actor isolation is `MainActor` in the app targets. Audio-thread code (`CaptureContext`) is explicitly `nonisolated` — keep it that way or the tap will trap at runtime.
 - Swift Regex doesn't support lookbehind; use `NSRegularExpression` for those patterns (`TextCleaner`).

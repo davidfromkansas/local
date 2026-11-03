@@ -32,7 +32,7 @@ final class AppModel {
             SettingsKey.model: ASRModelChoice.parakeetUnified.rawValue,
             SettingsKey.timeout: 300.0,
             SettingsKey.cleanup: true,
-            SettingsKey.debugFeed: Self.isSimulator,
+            SettingsKey.debugFeed: false,
         ])
         do {
             container = try ModelContainer(for: TranscriptRecord.self, DictionaryWord.self)
@@ -49,14 +49,6 @@ final class AppModel {
             container.mainContext.insert(TranscriptRecord(output: output))
             try? container.mainContext.save()
         }
-    }
-
-    static var isSimulator: Bool {
-        #if targetEnvironment(simulator)
-        true
-        #else
-        false
-        #endif
     }
 
     var modelChoice: ASRModelChoice {
