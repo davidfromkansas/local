@@ -7,7 +7,7 @@ struct TextEditTests {
     }
 
     @Test func `changed ending is deleted and retyped`() {
-        #expect(TextEdit.from("I want to", to: "I went to the") == TextEdit(deleteCount: 7, insert: "ent to the"))
+        #expect(TextEdit.from("I want to", to: "I went to the") == TextEdit(deleteCount: 6, insert: "ent to the"))
     }
 
     @Test func `same text does nothing`() {
