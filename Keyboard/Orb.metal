@@ -180,7 +180,7 @@ static float lavaField(float2 p, float2 size, float t) {
         float dx = (p.x - w * (fi + 0.5) / 6.0 - sin(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
         bottom += h * 0.1 * (0.6 + 0.4 * sin(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
     }
-    float d = min((h - bottom) - p.y, p.y - 4.0);
+    float d = min((h - bottom) - p.y, p.y - 5.5);
     for (int i = 0; i < 6; i++) {
         float fi = float(i);
         float cx = w * (fi + 0.5) / 6.0 + sin(t * 0.13 + fi * 1.7) * w * 0.035;
@@ -193,7 +193,7 @@ static float lavaField(float2 p, float2 size, float t) {
         float cx = w * (0.2 + 0.3 * fi) + sin(t * 0.11 + fi * 2.9) * w * 0.05;
         float r = 4.5 + 1.5 * lavaHash(fi + 7.0);
         float drip = h * (0.04 + 0.18 * max(0.0, sin(t * 0.37 + fi * 1.9)));
-        d = lavaSmin(d, lavaCapsule(p, float2(cx, 2.0), float2(cx, 4.0 + max(drip - r, 0.0)), r), 6.0);
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, 2.0), float2(cx, 5.5 + max(drip - r, 0.0)), r), 6.0);
     }
     for (int i = 0; i < 3; i++) {
         float fi = float(i);
@@ -224,14 +224,14 @@ fragment float4 lava_fragment(LavaOut in [[stage_in]], constant LavaUniforms &u 
 
     float3 light = normalize(float3(-0.35, -0.75, 0.55));
     float diffuse = max(dot(n, light), 0.0);
-    float spec = pow(max(dot(n, normalize(light + float3(0, 0, 1))), 0.0), 36.0);
+    float spec = pow(max(dot(n, normalize(light + float3(0, 0, 1))), 0.0), 18.0);
     float rim = pow(1.0 - n.z, 2.0);
 
-    float3 deep = float3(0.20, 0.07, 0.42);
-    float3 base = float3(0.56, 0.30, 0.93);
-    float3 wax = mix(deep, base, 0.3 + 0.7 * diffuse) + rim * float3(0.25, 0.15, 0.35) + spec * float3(1.0, 0.93, 1.0) * 0.85;
+    float3 deep = float3(0.34, 0.15, 0.68);
+    float3 base = float3(0.63, 0.40, 0.98);
+    float3 wax = mix(deep, base, 0.3 + 0.7 * diffuse) + rim * float3(0.40, 0.32, 0.55) + spec * float3(1.0, 0.94, 1.0) * 0.55;
 
-    float3 background = mix(float3(0.035, 0.010, 0.075), float3(0.085, 0.030, 0.160), p.y / u.size.y);
+    float3 background = mix(float3(0.05, 0.02, 0.10), float3(0.20, 0.07, 0.36), smoothstep(0.1, 1.0, p.y / u.size.y));
     float coverage = clamp(0.5 - d * u.scale, 0.0, 1.0);
     return float4(mix(background, wax, coverage), 1.0);
 }
