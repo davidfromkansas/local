@@ -98,7 +98,9 @@ struct KeyboardView: View {
     /// While listening the orb fills the keyboard; tapping it finishes dictation and brings the keys back.
     private var tappableOrb: some View {
         ZStack {
-            OrbGrid().opacity(gridOpacity)
+            OrbGrid()
+                .mask(GridEdgeFade())
+                .opacity(gridOpacity)
             orb.opacity(orbOpacity)
         }
         .contentShape(Rectangle())
@@ -380,6 +382,19 @@ private struct KeyPopup: View {
             .offset(y: -50)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+    }
+}
+
+/// iOS draws its own gray strips above and below the keyboard; the grid fades into them instead of ending in a hard edge.
+private struct GridEdgeFade: View {
+    private let fade: CGFloat = 28
+
+    var body: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: fade)
+            Color.black
+            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: fade)
+        }
     }
 }
 
