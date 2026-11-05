@@ -167,41 +167,46 @@ static float lavaCapsule(float2 p, float2 a, float2 b, float r) {
 static float lavaHash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 /// Signed distance (points) to the wax; negative inside.
+/// Triangle wave with sin's period and range: everything moves at a constant speed instead of easing.
+static float lavaWave(float x) {
+    return 1.0 - 4.0 * abs(fract(x / 6.2831853 + 0.25) - 0.5);
+}
+
 static float lavaField(float2 p, float2 size, float t) {
     float w = size.x, h = size.y;
     float bottom = 4.5;
     for (int i = 0; i < 4; i++) {
         float fi = float(i);
-        float dx = (p.x - w * (fi + 0.5) / 4.0 - sin(t * 0.09 + fi) * 20.0) / 22.0;
-        bottom += h * (0.05 + 0.04 * sin(t * 0.3 + fi * 1.3)) * exp(-dx * dx);
+        float dx = (p.x - w * (fi + 0.5) / 4.0 - lavaWave(t * 0.09 + fi) * 20.0) / 22.0;
+        bottom += h * (0.05 + 0.04 * lavaWave(t * 0.3 + fi * 1.3)) * exp(-dx * dx);
     }
     for (int i = 0; i < 6; i++) {
         float fi = float(i);
-        float dx = (p.x - w * (fi + 0.5) / 6.0 - sin(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
-        bottom += h * 0.1 * (0.6 + 0.4 * sin(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
+        float dx = (p.x - w * (fi + 0.5) / 6.0 - lavaWave(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
+        bottom += h * 0.1 * (0.6 + 0.4 * lavaWave(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
     }
     float d = min((h - bottom) - p.y, p.y - 5.5);
     for (int i = 0; i < 6; i++) {
         float fi = float(i);
-        float cx = w * (fi + 0.5) / 6.0 + sin(t * 0.13 + fi * 1.7) * w * 0.035;
+        float cx = w * (fi + 0.5) / 6.0 + lavaWave(t * 0.13 + fi * 1.7) * w * 0.035;
         float r = 5.5 + 2.0 * lavaHash(fi + 3.0);
-        float rise = h * (0.3 + 0.22 * sin(t * 0.45 + fi * 2.3));
+        float rise = h * (0.3 + 0.22 * lavaWave(t * 0.45 + fi * 2.3));
         d = lavaSmin(d, lavaCapsule(p, float2(cx, h - 2.0), float2(cx, h - 5.0 - max(rise - r, 0.0)), r), 8.0);
     }
     for (int i = 0; i < 3; i++) {
         float fi = float(i);
-        float cx = w * (0.2 + 0.3 * fi) + sin(t * 0.11 + fi * 2.9) * w * 0.05;
+        float cx = w * (0.2 + 0.3 * fi) + lavaWave(t * 0.11 + fi * 2.9) * w * 0.05;
         float r = 4.5 + 1.5 * lavaHash(fi + 7.0);
-        float drip = h * (0.04 + 0.18 * max(0.0, sin(t * 0.37 + fi * 1.9)));
+        float drip = h * (0.12 + 0.1 * lavaWave(t * 0.37 + fi * 1.9));
         d = lavaSmin(d, lavaCapsule(p, float2(cx, 2.0), float2(cx, 5.5 + max(drip - r, 0.0)), r), 6.0);
     }
     for (int i = 0; i < 3; i++) {
         float fi = float(i);
-        float speed = 0.07 + 0.04 * lavaHash(fi + 11.0);
+        float speed = 0.065;
         float phase = fract(t * speed + lavaHash(fi + 23.0));
         bool rising = i != 1;
         float y = rising ? mix(h + 2.0, -2.0, phase) : mix(-2.0, h + 2.0, phase);
-        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + sin(t * 0.3 + fi * 4.1) * 6.0;
+        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + lavaWave(t * 0.3 + fi * 4.1) * 6.0;
         float r = 4.0 + 2.5 * lavaHash(fi + 51.0);
         d = lavaSmin(d, length(p - float2(x, y)) - r, 6.0);
     }
