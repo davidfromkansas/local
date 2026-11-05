@@ -91,8 +91,8 @@ final class AppModel {
     }
 
     func startSessionFromKeyboard() {
-        guard UserDefaults.standard.bool(forKey: SettingsKey.onboarded) else { return }
         hotMic.activate()
-        if hotMic.phase != .inactive { showSwipeBack = true }
+        // During onboarding's "Try it" step the keyboard is inside Taki itself, so there's nowhere to swipe back to.
+        if hotMic.phase != .inactive, UserDefaults.standard.bool(forKey: SettingsKey.onboarded) { showSwipeBack = true }
     }
 }
