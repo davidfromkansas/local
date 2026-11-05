@@ -15,7 +15,7 @@ struct KeyboardView: View {
             MicBar(model: model)
                 .frame(height: 44)
                 .padding(.horizontal, 3)
-                .padding(.top, 6)
+                .padding(.top, 3)
                 .padding(.bottom, 8)
             ZStack {
                 if showsOrb {
@@ -157,7 +157,19 @@ private struct MicBar: View {
             }
             .foregroundStyle(state == .notReady ? Color.takiAccent : .white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(fill))
+            .background {
+                let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+                ZStack {
+                    shape.fill(fill)
+                    if showsSwimmer {
+                        OrbView(model: model, style: .swimmer)
+                            .transition(.opacity)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .clipShape(shape)
+                .animation(.takiSnappy, value: showsSwimmer)
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle(scale: reduceMotion ? 1 : 0.98))
@@ -169,6 +181,9 @@ private struct MicBar: View {
     }
 
     private var state: KeyboardUIState { model.state }
+
+    /// The little blob swims in the button until you tap; then the big orb takes over below.
+    private var showsSwimmer: Bool { (state == .ready || state == .notReady) && OrbView.isSupported }
 
     private var fill: Color {
         switch state {

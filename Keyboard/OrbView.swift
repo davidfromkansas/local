@@ -5,6 +5,7 @@ import TakiCore
 /// The voice orb shown in place of the letter keys while dictating.
 struct OrbView: UIViewRepresentable {
     let model: KeyboardModel
+    var style: OrbRenderer.Style = .hero
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
 
@@ -27,11 +28,11 @@ struct OrbView: UIViewRepresentable {
         context.coordinator.renderer?.dark = colorScheme == .dark
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(model: model) }
+    func makeCoordinator() -> Coordinator { Coordinator(model: model, style: style) }
 
     final class Coordinator {
         let renderer: OrbRenderer?
-        init(model: KeyboardModel) { renderer = OrbRenderer(model: model) }
+        init(model: KeyboardModel, style: OrbRenderer.Style) { renderer = OrbRenderer(model: model, style: style) }
     }
 
     static var isSupported: Bool { OrbRenderer.device != nil }
@@ -41,9 +42,21 @@ struct OrbView: UIViewRepresentable {
 /// (fast attack, slow release) so it rises with speech and melts back down in pauses.
 final class OrbRenderer: NSObject, MTKViewDelegate {
     static let device = MTLCreateSystemDefaultDevice()
-    /// 1024 × 1000 grid ≈ 1M vertices.
-    private static let cols: UInt32 = 1024
-    private static let rows: UInt32 = 1000
+
+    enum Style {
+        /// The big voice orb that replaces the keys while dictating: 1024 × 1000 grid ≈ 1M vertices.
+        case hero
+        /// A small blob that swims back and forth inside the idle mic button.
+        case swimmer
+
+        var grid: (cols: UInt32, rows: UInt32) { self == .hero ? (1024, 1000) : (320, 300) }
+    }
+
+    private let style: Style
+    private let cols: UInt32
+    private let rows: UInt32
+    private var swimX: Float = 0
+    private var stretch: Float = 1
 
     private weak var model: KeyboardModel?
     private let queue: MTLCommandQueue
@@ -59,7 +72,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     private var time: Float = 0
     private var lastFrame = CACurrentMediaTime()
 
-    init?(model: KeyboardModel) {
+    init?(model: KeyboardModel, style: Style) {
         guard let device = Self.device,
               let queue = device.makeCommandQueue(),
               let library = try? device.makeDefaultLibrary(bundle: Bundle(for: OrbRenderer.self)) else { return nil }
@@ -74,6 +87,8 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
               let depth = device.makeDepthStencilState(descriptor: depthDescriptor) else { return nil }
         self.model = model
+        self.style = style
+        (cols, rows) = style.grid
         self.queue = queue
         self.pipeline = pipeline
         self.depth = depth
@@ -103,7 +118,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<OrbUniforms>.stride, index: 0)
         encoder.setVertexBytes(&voice, length: MemoryLayout<SIMD3<Float>>.stride, index: 1)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<OrbUniforms>.stride, index: 0)
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: Int(Self.cols + 1) * 2, instanceCount: Int(Self.rows))
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: Int(cols + 1) * 2, instanceCount: Int(rows))
         encoder.endEncoding()
         buffer.present(drawable)
         buffer.commit()
@@ -136,11 +151,32 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let projection = Self.perspective(fovY: 0.62, aspect: aspect, near: 0.1, far: 20)
         let viewMatrix = Self.translation(-eye)
         let spin = reduceMotion ? 0 : time * 0.12
-        let scale = 0.92 - 0.12 * calm
-        let model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(scale)
+        let model: simd_float4x4
+        switch style {
+        case .hero:
+            model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(0.92 - 0.12 * calm)
+        case .swimmer:
+            model = swimmerTransform(aspect: aspect, spin: spin)
+        }
         return OrbUniforms(viewProjection: projection * viewMatrix, model: model, time: time, level: level,
-                           speaking: speaking, calm: calm, cols: Self.cols, rows: Self.rows,
+                           speaking: speaking, calm: calm, cols: cols, rows: rows,
                            motion: reduceMotion ? 0.5 : 1, dark: dark ? 1 : 0)
+    }
+
+    /// Lissajous swim across the button, stretched along its velocity (volume-preserving) so it reads as fluid.
+    private func swimmerTransform(aspect: Float, spin: Float) -> simd_float4x4 {
+        let halfWidth = 4.3 * tan(Float(0.31)) * aspect
+        let range = max(0, halfWidth - 1.6)
+        let x = reduceMotion ? 0 : range * (0.85 * sin(time * 0.42) + 0.15 * sin(time * 1.27))
+        let y: Float = reduceMotion ? 0 : 0.12 * sin(time * 0.9)
+        let velocity = x - swimX
+        swimX = x
+        let target = 1 + min(0.45, abs(velocity) * 6)
+        stretch += (target - stretch) * 0.15
+        let squash = 1 / stretch.squareRoot()
+        return Self.translation(SIMD3(x, y, 0))
+            * simd_float4x4(diagonal: SIMD4(stretch * 0.8, squash * 0.8, squash * 0.8, 1))
+            * Self.rotationX(0.35) * Self.rotationY(spin * 2.5)
     }
 
     private static func perspective(fovY: Float, aspect: Float, near: Float, far: Float) -> simd_float4x4 {
