@@ -49,6 +49,11 @@ nonisolated final class CaptureContext: @unchecked Sendable {
 
     var capturedSeconds: Double { lock.withLock { Double(samples.count) / 16_000 } }
 
+    /// Copy of what's been captured from `index` on, for live transcription while still capturing.
+    func samples(from index: Int) -> [Float] {
+        lock.withLock { index < samples.count ? Array(samples[index...]) : [] }
+    }
+
     /// Used by the DEBUG file feed so the keyboard waveform still moves.
     func publish(level: Float) {
         lock.withLock { currentLevel = level }

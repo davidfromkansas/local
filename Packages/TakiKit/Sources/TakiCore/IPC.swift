@@ -9,8 +9,10 @@ public enum TakiSignal: String, CaseIterable, Sendable {
     case stop
     /// Keyboard → app: stop capturing and discard the audio.
     case cancel
-    /// App → keyboard: a new `DictationResult` is in the shared store.
+    /// App → keyboard: a new `DictationResult` is in the shared store (final text, then a polished revision).
     case resultReady
+    /// App → keyboard: newer live text for the dictation in progress (`SharedStore.readPartial()`).
+    case partialReady
     /// App → keyboard: the `SessionSnapshot` changed.
     case stateChanged
 
@@ -66,7 +68,8 @@ public struct DictationRequest: Codable, Sendable, Equatable {
     }
 }
 
-/// Written by the app after a dictation finishes; the keyboard inserts `text`.
+/// Written by the app while dictating (live text, `partial.json`) and after it finishes (`result.json`:
+/// the quick final text, then possibly a polished revision). The keyboard edits the field to match `text`.
 public struct DictationResult: Codable, Sendable, Equatable {
     public var requestID: UUID?
     public var text: String

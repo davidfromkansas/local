@@ -29,6 +29,7 @@ public struct SharedStore: Sendable {
     private var snapshotURL: URL { directory.appending(path: "session.json") }
     private var requestURL: URL { directory.appending(path: "request.json") }
     private var resultURL: URL { directory.appending(path: "result.json") }
+    private var partialURL: URL { directory.appending(path: "partial.json") }
     private var levelURL: URL { directory.appending(path: "level.bin") }
 
     /// DEBUG-only audio feed location (used instead of the mic on machines without one).
@@ -42,6 +43,10 @@ public struct SharedStore: Sendable {
 
     public func write(_ result: DictationResult) { write(result, to: resultURL) }
     public func readResult() -> DictationResult? { read(DictationResult.self, from: resultURL) }
+
+    /// Live text while capturing; same shape as the final result.
+    public func writePartial(_ partial: DictationResult) { write(partial, to: partialURL) }
+    public func readPartial() -> DictationResult? { read(DictationResult.self, from: partialURL) }
 
     /// Normalized input level 0…1 while capturing.
     public func writeLevel(_ level: Float) {

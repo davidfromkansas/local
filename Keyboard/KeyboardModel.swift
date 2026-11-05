@@ -28,6 +28,9 @@ final class KeyboardModel {
     @ObservationIgnored private var listener: Task<Void, Never>?
     @ObservationIgnored private var poller: Task<Void, Never>?
     @ObservationIgnored private var pendingRequest: UUID?
+    /// Text this keyboard typed for the latest dictation, kept so live updates and the polished
+    /// revision can edit it in place.
+    @ObservationIgnored private var live: LiveInsertion?
     /// While waiting for the app to confirm a tap, keep the optimistic state on screen.
     @ObservationIgnored private var optimistic: (state: KeyboardUIState, until: Date)?
     @ObservationIgnored private var noticeTask: Task<Void, Never>?
@@ -41,10 +44,14 @@ final class KeyboardModel {
         deliverResultIfReady()
         listener?.cancel()
         listener = Task { [weak self] in
-            for await signal in DarwinNotifications.signals([.stateChanged, .resultReady]) {
+            for await signal in DarwinNotifications.signals([.stateChanged, .partialReady, .resultReady]) {
                 guard let self else { return }
-                if signal == .resultReady { deliverResultIfReady() }
-                refresh()
+                switch signal {
+                case .partialReady: showPartial()
+                case .resultReady: deliverResultIfReady()
+                default: break
+                }
+                if signal != .partialReady { refresh() }
             }
         }
         poller?.cancel()
@@ -78,6 +85,7 @@ final class KeyboardModel {
         case .ready:
             let request = DictationRequest()
             pendingRequest = request.id
+            live = LiveInsertion(id: request.id)
             store.write(request)
             levels = [Float](repeating: 0, count: Self.barCount)
             setOptimistic(.recording)
@@ -96,7 +104,7 @@ final class KeyboardModel {
         case .notReady: return hasFullAccess ? "Tap the mic to start Taki" : "Allow Full Access to use Taki"
         case .ready: return "Tap to dictate"
         case .recording: return "Listening… tap to finish"
-        case .processing: return "Writing it down…"
+        case .processing: return "Finishing up…"
         }
     }
 
@@ -121,17 +129,58 @@ final class KeyboardModel {
         }
     }
 
+    /// Live text while the user is still talking.
+    private func showPartial() {
+        guard let live, !live.isFinal, let partial = store?.readPartial(), partial.requestID == live.id else { return }
+        replaceLiveText(with: partial.text)
+    }
+
+    /// The final text, and later possibly a polished revision of it, for the same request.
     private func deliverResultIfReady() {
-        guard let pending = pendingRequest, let result = store?.readResult(), result.requestID == pending else { return }
-        pendingRequest = nil
-        optimistic = nil
-        let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else {
-            show("Didn't catch that — try again")
-            return
+        guard let result = store?.readResult(), let id = result.requestID else { return }
+        if id == pendingRequest {
+            pendingRequest = nil
+            optimistic = nil
+            live?.isFinal = true
+            if result.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                show("Didn't catch that — try again")
+            }
+            applyFinal(result.text)
+        } else if id == live?.id, live?.isFinal == true {
+            applyFinal(result.text)
         }
-        insertText(Self.spaced(text, after: contextBeforeInput()))
+    }
+
+    /// The host app can be a beat late reflecting our last edit; give the final text one retry.
+    private func applyFinal(_ text: String) {
+        guard !replaceLiveText(with: text), let id = live?.id else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard let self, live?.id == id else { return }
+            replaceLiveText(with: text)
+        }
+    }
+
+    /// Edits the field so the dictated text reads `text`, touching only the part that changed.
+    /// Leaves the field alone (returns false) if the user moved the cursor or typed after it.
+    @discardableResult
+    private func replaceLiveText(with text: String) -> Bool {
+        guard var live else { return false }
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let context = contextBeforeInput() ?? ""
+        if live.typed.isEmpty {
+            live.leadingSpace = Self.needsLeadingSpace(after: context)
+        } else if !TextEdit.field(context, endsWith: live.typed) {
+            return false
+        }
+        let target = text.isEmpty ? "" : (live.leadingSpace ? " " : "") + text
+        let edit = TextEdit.from(live.typed, to: target)
+        for _ in 0..<edit.deleteCount { deleteBackward() }
+        if !edit.insert.isEmpty { insertText(edit.insert) }
+        live.typed = target
+        self.live = live
         updateAutoShift()
+        return true
     }
 
     // MARK: Typing
@@ -193,10 +242,19 @@ final class KeyboardModel {
         return ".!?".contains(mark) || mark.isNewline
     }
 
-    /// Adds a leading space when dictating right after a word.
-    static func spaced(_ text: String, after context: String?) -> String {
-        guard let last = context?.last, !last.isWhitespace, !"([{\"'“‘/".contains(last) else { return text }
-        return " " + text
+    /// Dictating right after a word needs a space first.
+    static func needsLeadingSpace(after context: String?) -> Bool {
+        guard let last = context?.last else { return false }
+        return !last.isWhitespace && !"([{\"'“‘/".contains(last)
+    }
+
+    struct LiveInsertion {
+        let id: UUID
+        /// Exactly what's in the field for this dictation, leading space included.
+        var typed = ""
+        var leadingSpace = false
+        /// The final text arrived; ignore late live updates.
+        var isFinal = false
     }
 
     private func pushLevel(_ level: Float) {
