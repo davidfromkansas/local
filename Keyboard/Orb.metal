@@ -314,7 +314,10 @@ static float morphLava(float2 p, float4 bar, float box, float t, float k) {
         float dx = (p.x - w * (fi + 0.5) / 6.0 - lavaWave(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
         bottom += h * 0.1 * (0.6 + 0.4 * lavaWave(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
     }
-    float d = max(min((h - bottom) - p.y, p.y - 5.5) + 16.0 * smoothstep(0.0, 0.25, k), box);
+    // Pools as bands that stop at the bar's edge (half-planes would leave an invisible flat wall there
+    // that the smooth-min fuses blobs onto).
+    float pools = min(max((h - bottom) - p.y, p.y - h), max(p.y - 5.5, -p.y));
+    float d = max(pools + 16.0 * smoothstep(0.0, 0.25, k), box);
     float shrink = 24.0 * smoothstep(0.0, 0.45, k);
     for (int i = 0; i < 6; i++) {
         float fi = float(i);
