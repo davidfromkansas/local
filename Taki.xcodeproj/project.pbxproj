@@ -39,6 +39,7 @@
 		A5B5619DC0FB0E5DF48AFB6B /* 10-tech.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4E51AFEADBC936ACBB394A8C /* 10-tech.wav */; };
 		A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */; };
 		A90C4B0CFF4628FD67A2C8C9 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2EA2B24D2B0CA72BAFEC755 /* RootView.swift */; };
+		AA314AB0D849498E9FF07B2A /* KeyTouches.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAD0DD38589E619D2CF0F0A /* KeyTouches.swift */; };
 		AEF61AC93ED443BD3B1ED5F7 /* 02-grocery.wav in Resources */ = {isa = PBXBuildFile; fileRef = 14901CF522EA76118D3A40C6 /* 02-grocery.wav */; };
 		B2376AC8C6A612234BD144E9 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C42A087C5C3A2719BB9A89 /* AppModel.swift */; };
 		B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */; };
@@ -131,6 +132,7 @@
 		E1C42A087C5C3A2719BB9A89 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		E69D587B4CD2D7D6600C5A5E /* MicOrb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicOrb.swift; sourceTree = "<group>"; };
 		F1679D43871C77892F46E22E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FEAD0DD38589E619D2CF0F0A /* KeyTouches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyTouches.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,6 +217,7 @@
 				B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */,
 				275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */,
 				61AF860832971072BEB4B031 /* KeyFeedback.swift */,
+				FEAD0DD38589E619D2CF0F0A /* KeyTouches.swift */,
 				BA3773B33E9EEB76552A2039 /* Orb.metal */,
 				A0D57466FF55C5470BAA635B /* OrbView.swift */,
 				6A1753097FE06E8D25909EEE /* PrivacyInfo.xcprivacy */,
@@ -490,6 +493,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F5A5B7CD5481616B020DB99B /* KeyFeedback.swift in Sources */,
+				AA314AB0D849498E9FF07B2A /* KeyTouches.swift in Sources */,
 				B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */,
 				0356564E2231A273C9657781 /* KeyboardView.swift in Sources */,
 				A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */,
