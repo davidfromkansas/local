@@ -73,7 +73,7 @@ struct KeyboardView: View {
                     if transitionID == id { barVisible = false }
                 }
             } else {
-                withAnimation(.linear(duration: 0.08)) { orbOpacity = 0 }
+                withAnimation(.easeInOut(duration: 0.12)) { orbOpacity = 0 }
                 withAnimation(.easeInOut(duration: 0.3).delay(0.4)) { keysOpacity = 1; gridOpacity = 0 }
             }
         } else {

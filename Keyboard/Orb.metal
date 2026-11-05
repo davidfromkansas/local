@@ -342,13 +342,23 @@ fragment float4 morph_fragment(LavaOut in [[stage_in]], constant MorphUniforms &
 
     float d = morphField(p, u);
     float coverage = clamp(0.5 - d * u.scale, 0.0, 1.0);
-    if (coverage <= 0.0) return float4(background * barAlpha, barAlpha);
+    if (coverage <= 0.0 || k >= 1.0) return float4(background * barAlpha, barAlpha);
 
     float dome = mix(7.0, u.radius, smoothstep(0.25, 1.0, k));
     float e = 0.6;
     float hx = morphHeight(p + float2(e, 0), u, dome) - morphHeight(p - float2(e, 0), u, dome);
     float hy = morphHeight(p + float2(0, e), u, dome) - morphHeight(p - float2(0, e), u, dome);
     float3 n = normalize(float3(-hx / (2.0 * e), -hy / (2.0 * e), 1.0));
+    // The lumpy outline extruded as a height field shades like a pinwheel; as the ball takes over, light it
+    // as the orb's sphere instead.
+    float sphere = smoothstep(0.45, 0.85, k);
+    if (sphere > 0.0) {
+        float2 off = p - u.center;
+        float dist = length(off);
+        float2 q = off / (dist > 1e-3 ? orbOutline(off / dist, u) : u.radius);
+        float3 ball = float3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
+        n = normalize(mix(n, normalize(ball), sphere));
+    }
 
     // Lava bar look (matches lava_fragment).
     float3 light = normalize(float3(-0.35, -0.75, 0.55));
@@ -378,6 +388,7 @@ fragment float4 morph_fragment(LavaOut in [[stage_in]], constant MorphUniforms &
     orb *= 1.0 - 0.2 * u.calm;
 
     float3 wax = mix(lava, orb, smoothstep(0.25, 0.9, k));
+    coverage *= 1.0 - smoothstep(0.85, 1.0, k);   // cross-fades with the live orb underneath
     float under = barAlpha * (1.0 - coverage);
     return float4(wax * coverage + background * under, coverage + under);
 }
