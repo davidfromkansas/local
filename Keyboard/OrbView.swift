@@ -154,7 +154,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let model: simd_float4x4
         switch style {
         case .hero:
-            model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(0.92 - 0.12 * calm)
+            model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(1.12 - 0.14 * calm)
         case .swimmer:
             model = swimmerTransform(aspect: aspect, spin: spin)
         }

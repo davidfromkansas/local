@@ -38,6 +38,7 @@ struct KeyboardView: View {
     /// While listening the orb fills the keyboard; tapping it finishes dictation and brings the keys back.
     private var tappableOrb: some View {
         orb
+            .background(OrbGrid())
             .contentShape(Rectangle())
             .onTapGesture {
                 guard model.state == .recording else { return }
@@ -329,5 +330,33 @@ private struct KeyPopup: View {
             .offset(y: -50)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+    }
+}
+
+/// Soft white "paper" with a light gray square grid behind the orb.
+private struct OrbGrid: View {
+    @Environment(\.colorScheme) private var colorScheme
+    private let cell: CGFloat = 22
+
+    var body: some View {
+        let dark = colorScheme == .dark
+        Canvas { context, size in
+            var lines = Path()
+            let columns = Int(size.width / cell) + 1, rows = Int(size.height / cell) + 1
+            let x0 = (size.width - CGFloat(columns - 1) * cell) / 2
+            let y0 = (size.height - CGFloat(rows - 1) * cell) / 2
+            for i in 0..<columns {
+                let x = (x0 + CGFloat(i) * cell).rounded() + 0.25
+                lines.move(to: CGPoint(x: x, y: 0))
+                lines.addLine(to: CGPoint(x: x, y: size.height))
+            }
+            for j in 0..<rows {
+                let y = (y0 + CGFloat(j) * cell).rounded() + 0.25
+                lines.move(to: CGPoint(x: 0, y: y))
+                lines.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(lines, with: .color(dark ? .white.opacity(0.07) : Color(white: 0.86)), lineWidth: 0.5)
+        }
+        .background(dark ? Color(white: 0.09) : Color(red: 0.975, green: 0.973, blue: 0.965))
     }
 }
