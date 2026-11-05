@@ -3,7 +3,7 @@ using namespace metal;
 
 // Taki's voice orb: a ~1M-vertex sphere generated entirely on the GPU (no vertex buffers, so it costs the
 // memory-limited keyboard almost nothing). Each vertex is pushed along its normal by layered noise ("liquid")
-// whose strength comes from the voice spectrum: low frequencies swell the equator, highs ripple the poles.
+// whose strength comes from the voice spectrum (low / mid / high energy each drive one lobe field).
 
 struct OrbUniforms {
     float4x4 viewProjection;
@@ -71,20 +71,10 @@ static float snoise(float3 v) {
     return 105.0 * dot(m * m, float4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
 }
 
-// Spectrum lookup: latitude picks the band (warped by noise so it reads as liquid, not stripes).
-static float bandEnergy(float3 n, float t, constant float *bands, uint count) {
-    float s = saturate(abs(n.y) + 0.18 * snoise(n * 1.7 + float3(0.0, t * 0.2, 0.0)));
-    float idx = s * float(count - 1);
-    uint i0 = uint(floor(idx));
-    uint i1 = min(i0 + 1, count - 1);
-    return mix(bands[i0], bands[i1], fract(idx));
-}
-
 vertex VOut orb_vertex(uint vid [[vertex_id]],
                        uint iid [[instance_id]],
                        constant OrbUniforms &u [[buffer(0)]],
-                       constant float *bands [[buffer(1)]],
-                       constant uint &bandCount [[buffer(2)]]) {
+                       constant float3 &voice [[buffer(1)]]) {
     // One triangle strip per latitude row; instance = row.
     uint col = vid >> 1;
     uint row = iid + (vid & 1);
@@ -92,17 +82,18 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
     float lat = float(row) / float(u.rows) * M_PI_F;
     float3 n = float3(sin(lat) * cos(lon), cos(lat), sin(lat) * sin(lon));
 
+    // Only big, slow lobes (David's reference: 4–6 broad bumps, never wrinkles). Each voice range drives
+    // its own lobe field: lows swell the widest lobes, mids and highs the slightly smaller ones.
     float t = u.time;
-    float e = bandEnergy(n, t, bands, bandCount);
-    // A few big, slow lobes (the "liquid blob"), plus finer ripples that only appear with voice.
-    float swell = snoise(n * 1.5 + float3(0.0, t * 0.35, t * 0.2));
-    float lobes = snoise(n * 2.3 + float3(t * 0.45, -t * 0.3, t * 0.25));
-    float ripple = snoise(n * 4.8 + float3(-t * 0.9, t * 0.7, t * 0.6));
+    float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
+    float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
+    float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
 
-    float idle = 0.07 * swell + 0.04 * lobes;
-    float voice = u.speaking * (0.11 * e * (0.6 + 0.4 * lobes) + 0.05 * lobes + 0.025 * ripple * e)
-                + 0.05 * u.level * swell;
-    float d = (idle + voice * u.motion) * (1.0 - 0.6 * u.calm);
+    float idle = 0.075 * wide + 0.035 * mid;
+    float speech = u.speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight)
+                 + 0.04 * u.level;
+    float d = (idle + speech * u.motion) * (1.0 - 0.6 * u.calm);
+    float e = u.speaking * (voice.x + voice.y + voice.z) / 3.0;
 
     float4 world = u.model * float4(n * (1.0 + d), 1.0);
     VOut out;
@@ -137,7 +128,7 @@ fragment float4 orb_fragment(VOut in [[stage_in]], constant OrbUniforms &u [[buf
     color *= mix(0.55, 1.0, saturate(in.displacement * 6.0 + 0.6));   // valleys pool shadow
     color *= mix(0.6, 1.0, ndv);                                        // edges fall off like the reference
 
-    float spec = pow(saturate(dot(nrm, h)), 22.0) * 0.16 + pow(saturate(dot(nrm, h)), 110.0) * 0.28;
+    float spec = pow(saturate(dot(nrm, h)), 18.0) * 0.14 + pow(saturate(dot(nrm, h)), 60.0) * 0.12;
     color += float3(0.95, 0.9, 1.0) * spec;
     color += float3(0.45, 0.25, 0.75) * pow(1.0 - ndv, 3.0) * 0.5 * u.dark;
     color *= 1.0 - 0.2 * u.calm;

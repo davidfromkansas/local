@@ -96,13 +96,12 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
               let encoder = buffer.makeRenderCommandEncoder(descriptor: pass) else { return }
         let size = view.drawableSize
         var uniforms = makeUniforms(aspect: Float(size.width / max(1, size.height)))
-        var count = UInt32(bands.count)
+        var voice = voiceRanges()
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depth)
         encoder.setCullMode(.none)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<OrbUniforms>.stride, index: 0)
-        encoder.setVertexBytes(bands, length: MemoryLayout<Float>.stride * bands.count, index: 1)
-        encoder.setVertexBytes(&count, length: MemoryLayout<UInt32>.stride, index: 2)
+        encoder.setVertexBytes(&voice, length: MemoryLayout<SIMD3<Float>>.stride, index: 1)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<OrbUniforms>.stride, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: Int(Self.cols + 1) * 2, instanceCount: Int(Self.rows))
         encoder.endEncoding()
@@ -123,6 +122,13 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let settling: Float = model?.state == .processing ? 1 : 0
         calm += (settling - calm) * 0.08
         time += dt * (reduceMotion ? 0.35 : 1) * (1 + speaking * 0.6)
+    }
+
+    /// Low / mid / high averages of the smoothed bands.
+    private func voiceRanges() -> SIMD3<Float> {
+        let third = bands.count / 3
+        func mean(_ range: Range<Int>) -> Float { bands[range].reduce(0, +) / Float(max(1, range.count)) }
+        return SIMD3(mean(0..<third), mean(third..<(2 * third)), mean((2 * third)..<bands.count))
     }
 
     private func makeUniforms(aspect: Float) -> OrbUniforms {
