@@ -134,3 +134,104 @@ fragment float4 orb_fragment(VOut in [[stage_in]], constant OrbUniforms &u [[buf
     color *= 1.0 - 0.2 * u.calm;
     return float4(color, 1.0);
 }
+
+// Taki's idle mic bar: a 2D lava lamp. Wax pools along the top and bottom edges, mounds rise and drip,
+// and droplets pinch off, travel across, and merge into the opposite pool (smooth-min metaballs).
+// The field is turned into a dome height map so it's lit with the same glossy purple as the voice orb.
+struct LavaUniforms {
+    float2 size;   // points
+    float time;
+    float scale;   // pixels per point
+};
+
+struct LavaOut { float4 position [[position]]; };
+
+vertex LavaOut lava_vertex(uint vid [[vertex_id]]) {
+    float2 p = float2((vid << 1) & 2, vid & 2);
+    LavaOut out;
+    out.position = float4(p * 2.0 - 1.0, 0.0, 1.0);
+    return out;
+}
+
+static float lavaSmin(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+    return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+static float lavaCapsule(float2 p, float2 a, float2 b, float r) {
+    float2 pa = p - a, ba = b - a;
+    float k = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
+    return length(pa - ba * k) - r;
+}
+
+static float lavaHash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+
+/// Signed distance (points) to the wax; negative inside.
+static float lavaField(float2 p, float2 size, float t) {
+    float w = size.x, h = size.y;
+    float bottom = 4.5;
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float dx = (p.x - w * (fi + 0.5) / 4.0 - sin(t * 0.09 + fi) * 20.0) / 22.0;
+        bottom += h * (0.05 + 0.04 * sin(t * 0.3 + fi * 1.3)) * exp(-dx * dx);
+    }
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float dx = (p.x - w * (fi + 0.5) / 6.0 - sin(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
+        bottom += h * 0.1 * (0.6 + 0.4 * sin(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
+    }
+    float d = min((h - bottom) - p.y, p.y - 4.0);
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float cx = w * (fi + 0.5) / 6.0 + sin(t * 0.13 + fi * 1.7) * w * 0.035;
+        float r = 5.5 + 2.0 * lavaHash(fi + 3.0);
+        float rise = h * (0.3 + 0.22 * sin(t * 0.45 + fi * 2.3));
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, h - 2.0), float2(cx, h - 5.0 - max(rise - r, 0.0)), r), 8.0);
+    }
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float cx = w * (0.2 + 0.3 * fi) + sin(t * 0.11 + fi * 2.9) * w * 0.05;
+        float r = 4.5 + 1.5 * lavaHash(fi + 7.0);
+        float drip = h * (0.04 + 0.18 * max(0.0, sin(t * 0.37 + fi * 1.9)));
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, 2.0), float2(cx, 4.0 + max(drip - r, 0.0)), r), 6.0);
+    }
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float speed = 0.07 + 0.04 * lavaHash(fi + 11.0);
+        float phase = fract(t * speed + lavaHash(fi + 23.0));
+        bool rising = i != 1;
+        float y = rising ? mix(h + 2.0, -2.0, phase) : mix(-2.0, h + 2.0, phase);
+        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + sin(t * 0.3 + fi * 4.1) * 6.0;
+        float r = 4.0 + 2.5 * lavaHash(fi + 51.0);
+        d = lavaSmin(d, length(p - float2(x, y)) - r, 6.0);
+    }
+    return d;
+}
+
+static float waxHeight(float2 p, float2 size, float t) {
+    const float dome = 7.0;
+    float s = clamp(-lavaField(p, size, t) / dome, 0.0, 1.0);
+    return dome * sqrt(1.0 - (1.0 - s) * (1.0 - s));
+}
+
+fragment float4 lava_fragment(LavaOut in [[stage_in]], constant LavaUniforms &u [[buffer(0)]]) {
+    float2 p = in.position.xy / u.scale;
+    float d = lavaField(p, u.size, u.time);
+    float e = 0.6;
+    float hx = waxHeight(p + float2(e, 0), u.size, u.time) - waxHeight(p - float2(e, 0), u.size, u.time);
+    float hy = waxHeight(p + float2(0, e), u.size, u.time) - waxHeight(p - float2(0, e), u.size, u.time);
+    float3 n = normalize(float3(-hx / (2.0 * e), -hy / (2.0 * e), 1.0));
+
+    float3 light = normalize(float3(-0.35, -0.75, 0.55));
+    float diffuse = max(dot(n, light), 0.0);
+    float spec = pow(max(dot(n, normalize(light + float3(0, 0, 1))), 0.0), 36.0);
+    float rim = pow(1.0 - n.z, 2.0);
+
+    float3 deep = float3(0.20, 0.07, 0.42);
+    float3 base = float3(0.56, 0.30, 0.93);
+    float3 wax = mix(deep, base, 0.3 + 0.7 * diffuse) + rim * float3(0.25, 0.15, 0.35) + spec * float3(1.0, 0.93, 1.0) * 0.85;
+
+    float3 background = mix(float3(0.035, 0.010, 0.075), float3(0.085, 0.030, 0.160), p.y / u.size.y);
+    float coverage = clamp(0.5 - d * u.scale, 0.0, 1.0);
+    return float4(mix(background, wax, coverage), 1.0);
+}

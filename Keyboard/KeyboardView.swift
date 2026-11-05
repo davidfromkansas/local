@@ -14,7 +14,7 @@ struct KeyboardView: View {
         VStack(spacing: 0) {
             if !showsOrb {
                 MicBar(model: model)
-                    .frame(height: 44)
+                    .frame(height: 50)
                     .padding(.horizontal, 3)
                     .padding(.top, 3)
                     .padding(.bottom, 8)
@@ -162,54 +162,39 @@ private struct MicBar: View {
             KeyFeedback.shared.press()
             model.micTapped()
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: state == .recording ? "stop.fill" : "mic.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .symbolEffect(.pulse, options: .repeating, isActive: state == .processing && !reduceMotion)
-                    .contentTransition(.symbolEffect(.replace))
-                Text(model.statusText)
-                    .font(.system(size: 16, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .contentTransition(.opacity)
-            }
-            .foregroundStyle(state == .notReady ? Color.takiAccent : .white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-                ZStack {
-                    shape.fill(fill)
-                    if showsSwimmer {
-                        OrbView(model: model, style: .swimmer)
-                            .transition(.opacity)
-                            .accessibilityHidden(true)
-                    }
+            ZStack {
+                if OrbView.isSupported {
+                    LavaView()
+                        .accessibilityHidden(true)
+                } else {
+                    Color.takiAccent
                 }
-                .clipShape(shape)
-                .animation(.takiSnappy, value: showsSwimmer)
+                if let caption {
+                    HStack(spacing: 8) {
+                        Image(systemName: "mic.fill")
+                        Text(caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 3)
+                    .padding(.horizontal, 12)
+                    .transition(.opacity)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle(scale: reduceMotion ? 1 : 0.98))
-        .animation(.takiSnappy, value: state)
-        .animation(.takiSnappy, value: model.statusText)
-        .accessibilityLabel(state == .recording ? "Stop dictation" : "Dictate")
+        .animation(.takiSnappy, value: caption)
+        .accessibilityLabel("Dictate")
         .accessibilityValue(model.statusText)
     }
 
-    private var state: KeyboardUIState { model.state }
-
-    /// The little blob swims in the button until you tap; then the big orb takes over below.
-    private var showsSwimmer: Bool { (state == .ready || state == .notReady) && OrbView.isSupported }
-
-    private var fill: Color {
-        switch state {
-        case .notReady: Color.takiAccent.opacity(0.16)
-        case .ready: .takiAccent
-        case .recording: .takiRecording
-        case .processing: Color.takiAccent.opacity(0.7)
-        }
-    }
+    /// Ready shows just the lava lamp; setup states and notices are written over it.
+    private var caption: String? { OrbView.isSupported ? model.micCaption : model.statusText }
 }
 
 // MARK: - Keys

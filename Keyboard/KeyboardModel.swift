@@ -110,6 +110,8 @@ final class KeyboardModel {
         }
     }
 
+    var micCaption: String? { notice == nil && state == .ready ? nil : statusText }
+
     var statusText: String {
         if let notice { return notice }
         switch state {
