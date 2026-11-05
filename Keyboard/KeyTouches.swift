@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import os
 
 /// All key touches go through one multi-touch UIKit view instead of per-key SwiftUI gestures, which drop
 /// very short taps and taps that land while the layout is re-rendering (after shift, return, 123/ABC).
@@ -8,6 +9,7 @@ import UIKit
 final class KeyTouches {
     nonisolated static let space = "keys"
     private static let reach: CGFloat = 12
+    private static let log = Logger(subsystem: "com.davidfromkansas.taki.keyboard", category: "touches")
 
     struct Key {
         var id: String
@@ -32,7 +34,9 @@ final class KeyTouches {
     }
 
     func began(_ touch: UITouch, at point: CGPoint) {
-        guard let key = nearest(to: point) else { return }
+        let key = nearest(to: point)
+        Self.log.debug("touch \(point.x, format: .fixed(precision: 1)),\(point.y, format: .fixed(precision: 1)) -> \(key?.id ?? "none", privacy: .public) of \(self.keys.count)")
+        guard let key else { return }
         active[ObjectIdentifier(touch)] = key.id
         pressed.insert(key.id)
         KeyFeedback.shared.press()

@@ -15,6 +15,8 @@ enum SettingsKey {
 enum ModelStatus: Equatable {
     case notDownloaded
     case downloading(Double)
+    /// Already on disk; compiling/loading into memory (every launch).
+    case loading
     case ready
     case failed(String)
 }
@@ -64,7 +66,14 @@ final class AppModel {
             modelStatus = .notDownloaded
             return
         }
-        await prepareModels()
+        guard modelStatus != .loading, modelStatus != .ready else { return }
+        modelStatus = .loading
+        do {
+            try await engine.prepare(choice)
+            modelStatus = .ready
+        } catch {
+            modelStatus = .failed(error.localizedDescription)
+        }
     }
 
     /// Downloads (first time only) and compiles the chosen model, reporting progress.

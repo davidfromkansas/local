@@ -4,8 +4,10 @@ import TakiCore
 import TakiEngine
 import UIKit
 
-/// The "hot mic": keeps an AVAudioEngine running (armed) so the app stays alive in the
-/// background, and flips to capturing when the keyboard asks over Darwin notifications.
+/// The "hot mic". Armed: a silent output-only engine keeps the app alive in the background with the
+/// mic **off**; the mic engine starts only while capturing (keyboard asks over Darwin notifications).
+/// If iOS refuses to start the mic from the background, the session falls back for good to keeping
+/// the mic engine running for the whole session (`holdsMicOpen`), which iOS does allow.
 @Observable
 final class HotMicController {
     private(set) var machine = SessionMachine()
@@ -22,6 +24,7 @@ final class HotMicController {
     @ObservationIgnored private let capture: CaptureContext
     @ObservationIgnored private var audioEngine: AVAudioEngine?
     @ObservationIgnored private var silentPlayer: AVAudioPlayerNode?
+    @ObservationIgnored private var micEngine: AVAudioEngine?
     @ObservationIgnored private var debugBackgroundTask: UIBackgroundTaskIdentifier = .invalid
     @ObservationIgnored private var listener: Task<Void, Never>?
     @ObservationIgnored private var ticker: Task<Void, Never>?
@@ -40,6 +43,9 @@ final class HotMicController {
 
     /// Longest single dictation we accumulate before stopping automatically.
     static let maxCaptureSeconds: Double = 5 * 60
+
+    static let holdsMicOpenKey = "holdsMicOpen"
+    private var holdsMicOpen: Bool { UserDefaults.standard.bool(forKey: Self.holdsMicOpenKey) }
 
     var phase: SessionPhase { machine.phase }
     var expiresAt: Date? { machine.expiresAt }
@@ -60,6 +66,7 @@ final class HotMicController {
         if machine.handle(.activate(now: .now)) == .startEngine {
             do {
                 try startAudio()
+                if holdsMicOpen { try startMic() }
             } catch where Self.debugFeedEnabled {
                 // Simulator on a Mac with no audio hardware: run the session on the test feed alone.
                 discardAudioEngine()
@@ -98,6 +105,18 @@ final class HotMicController {
     func startCapture() {
         switch machine.handle(.startCapture(now: .now)) {
         case .beginCapture:
+            do {
+                try startMic()
+            } catch {
+                // iOS wouldn't turn the mic on from the background: from now on keep it open for the
+                // whole session. Ending the session makes the keyboard reopen Taki to start one.
+                UserDefaults.standard.set(true, forKey: Self.holdsMicOpenKey)
+                _ = machine.handle(.end)
+                stopAudio()
+                lastError = "Tap the bar again to restart Taki."
+                publish(error: lastError)
+                return
+            }
             captureStartedAt = .now
             feedSamples = loadDebugFeedIfEnabled()
             capture.begin()
@@ -113,6 +132,7 @@ final class HotMicController {
     func stopCapture() {
         guard machine.handle(.stopCapture) == .finishCapture else { return }
         let captured = capture.finish()
+        if !holdsMicOpen { stopMic() }
         let samples = feedSamples ?? captured
         // Only the audio the live transcriber hasn't seen yet.
         let rest = liveSampleCount < samples.count ? Array(samples[liveSampleCount...]) : []
@@ -134,6 +154,7 @@ final class HotMicController {
     func cancelCapture() {
         if machine.handle(.cancelCapture(now: .now)) == .discardCapture {
             _ = capture.finish()
+            if !holdsMicOpen { stopMic() }
             stopLiveTranscription()
             feedSamples = nil
             captureStartedAt = nil
@@ -307,20 +328,42 @@ final class HotMicController {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker])
         try session.setActive(true)
-        let audioEngine = AVAudioEngine()
-        if session.isInputAvailable, case let format = audioEngine.inputNode.outputFormat(forBus: 0),
-           format.channelCount > 0, format.sampleRate > 0 {
-            capture.install(on: audioEngine.inputNode, format: format)
-        } else if Self.debugFeedEnabled {
-            // No mic (simulator on a Mac without one): play silence so the engine keeps the app alive.
-            try startSilentKeepAlive(on: audioEngine)
-        } else {
+        let keepAlive = AVAudioEngine()
+        try startSilentKeepAlive(on: keepAlive)
+        keepAlive.prepare()
+        try keepAlive.start()
+        silentPlayer?.play()
+        audioEngine = keepAlive
+    }
+
+    /// Turns the microphone on (orange dot) and feeds `capture`. No-op without a mic when the DEBUG feed is on.
+    private func startMic() throws {
+        guard micEngine == nil else { return }
+        guard AVAudioSession.sharedInstance().isInputAvailable else {
+            if Self.debugFeedEnabled { return }
             throw HotMicError.noMicrophone
         }
-        audioEngine.prepare()
-        try audioEngine.start()
-        silentPlayer?.play()
-        self.audioEngine = audioEngine
+        let mic = AVAudioEngine()
+        let format = mic.inputNode.outputFormat(forBus: 0)
+        guard format.channelCount > 0, format.sampleRate > 0 else {
+            if Self.debugFeedEnabled { return }
+            throw HotMicError.noMicrophone
+        }
+        capture.install(on: mic.inputNode, format: format)
+        mic.prepare()
+        do {
+            try mic.start()
+        } catch {
+            mic.inputNode.removeTap(onBus: 0)
+            throw error
+        }
+        micEngine = mic
+    }
+
+    private func stopMic() {
+        micEngine?.inputNode.removeTap(onBus: 0)
+        micEngine?.stop()
+        micEngine = nil
     }
 
     private func startSilentKeepAlive(on audioEngine: AVAudioEngine) throws {
@@ -347,6 +390,7 @@ final class HotMicController {
     }
 
     private func discardAudioEngine() {
+        stopMic()
         silentPlayer?.stop()
         silentPlayer = nil
         audioEngine?.stop()
@@ -371,7 +415,7 @@ final class HotMicController {
         ticker?.cancel()
         ticker = nil
         endDebugBackgroundTask()
-        if silentPlayer == nil { audioEngine?.inputNode.removeTap(onBus: 0) }
+        stopMic()
         silentPlayer?.stop()
         silentPlayer = nil
         audioEngine?.stop()

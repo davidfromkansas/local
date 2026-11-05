@@ -62,6 +62,7 @@ struct SettingsView: View {
         switch model.modelStatus {
         case .notDownloaded: "Not downloaded"
         case let .downloading(fraction): "Downloading \(Int(fraction * 100))%"
+        case .loading: "Loading…"
         case .ready: "Ready, works offline"
         case .failed: "Failed"
         }

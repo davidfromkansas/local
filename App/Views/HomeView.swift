@@ -79,9 +79,11 @@ struct HomeView: View {
 
     private var modelCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Speech model not ready", systemImage: "arrow.down.circle")
+            Label(model.modelStatus == .loading ? "Loading speech model…" : "Speech model not ready", systemImage: "arrow.down.circle")
                 .font(.headline)
             switch model.modelStatus {
+            case .loading:
+                ProgressView()
             case let .downloading(fraction):
                 ProgressView(value: fraction)
             case let .failed(message):
