@@ -26,7 +26,7 @@ final class KeyboardViewController: UIInputViewController {
         addChild(host)
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
-        let height = view.heightAnchor.constraint(equalToConstant: 274)
+        let height = view.heightAnchor.constraint(equalToConstant: 278)
         height.priority = .defaultHigh
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),

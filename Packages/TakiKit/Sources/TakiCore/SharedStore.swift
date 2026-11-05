@@ -31,6 +31,7 @@ public struct SharedStore: Sendable {
     private var resultURL: URL { directory.appending(path: "result.json") }
     private var partialURL: URL { directory.appending(path: "partial.json") }
     private var levelURL: URL { directory.appending(path: "level.bin") }
+    private var spectrumURL: URL { directory.appending(path: "spectrum.bin") }
 
     /// DEBUG-only audio feed location (used instead of the mic on machines without one).
     public var debugFeedURL: URL { directory.appending(path: "debug-feed.wav") }
@@ -58,6 +59,17 @@ public struct SharedStore: Sendable {
     public func readLevel() -> Float {
         guard let data = try? Data(contentsOf: levelURL), data.count == MemoryLayout<Float>.size else { return 0 }
         return data.withUnsafeBytes { $0.loadUnaligned(as: Float.self) }
+    }
+
+    /// `SpectrumAnalyzer` bands while capturing (empty when idle).
+    public func writeSpectrum(_ bands: [Float]) {
+        let data = bands.withUnsafeBufferPointer { Data(buffer: $0) }
+        try? data.write(to: spectrumURL, options: .atomic)
+    }
+
+    public func readSpectrum() -> [Float] {
+        guard let data = try? Data(contentsOf: spectrumURL), data.count % MemoryLayout<Float>.size == 0 else { return [] }
+        return data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
     }
 
     private func write<T: Encodable>(_ value: T, to url: URL) {

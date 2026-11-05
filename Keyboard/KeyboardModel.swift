@@ -9,6 +9,9 @@ final class KeyboardModel {
 
     private(set) var state: KeyboardUIState = .notReady
     private(set) var levels = [Float](repeating: 0, count: KeyboardModel.barCount)
+    /// Read every frame by the orb renderer, so kept out of SwiftUI observation.
+    @ObservationIgnored private(set) var level: Float = 0
+    @ObservationIgnored private(set) var spectrum: [Float] = []
     private(set) var notice: String?
     var hasFullAccess = true
     var showsGlobeKey = true
@@ -63,7 +66,14 @@ final class KeyboardModel {
                 try? await Task.sleep(for: .milliseconds(33))
                 guard let self else { return }
                 tick += 1
-                if state == .recording { pushLevel(store?.readLevel() ?? 0) }
+                if state == .recording {
+                    level = store?.readLevel() ?? 0
+                    spectrum = store?.readSpectrum() ?? []
+                    pushLevel(level)
+                } else if level != 0 || !spectrum.isEmpty {
+                    level = 0
+                    spectrum = []
+                }
                 if tick % 15 == 0 { refresh() }
             }
         }
@@ -105,7 +115,7 @@ final class KeyboardModel {
         switch state {
         case .notReady: return hasFullAccess ? "Tap to start Taki" : "Allow Full Access to use Taki"
         case .ready: return "Tap to dictate"
-        case .recording: return "Listening…"
+        case .recording: return "Listening… tap to finish"
         case .processing: return "Finishing…"
         }
     }

@@ -32,6 +32,7 @@
 		61B5E106CD0E7B91171FB81D /* debug-feed.wav in Resources */ = {isa = PBXBuildFile; fileRef = 05D59FE14588322878E63472 /* debug-feed.wav */; };
 		6698DACFE3EECE044E39FD1C /* AppSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A635D1134A25BC168BE9A8 /* AppSmokeTests.swift */; };
 		68E3CAE3AB7DDE1FDA2A45E2 /* 05-correction.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2E59447675FCD34038383A13 /* 05-correction.wav */; };
+		967AEC9E47F9C9533104E9E8 /* Orb.metal in Sources */ = {isa = PBXBuildFile; fileRef = BA3773B33E9EEB76552A2039 /* Orb.metal */; };
 		9F0BD838C0E5CF9E6747A6B6 /* 04-names.wav in Resources */ = {isa = PBXBuildFile; fileRef = C0A7EC8EDB94FE53E44A834B /* 04-names.wav */; };
 		A5B5619DC0FB0E5DF48AFB6B /* 10-tech.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4E51AFEADBC936ACBB394A8C /* 10-tech.wav */; };
 		A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */; };
@@ -41,6 +42,7 @@
 		B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */; };
 		B84B93A8023044A6C80CB826 /* TakiCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2B0A5FF77D9E5389EEB70EA /* TakiCore */; };
 		B998BE3BE29B09F3591751D3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C7B379DCACFD7D46658120 /* HomeView.swift */; };
+		BB17A7701C08A3940DAB5352 /* OrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D57466FF55C5470BAA635B /* OrbView.swift */; };
 		BDD7A9E93217317B97A7AE09 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B4E02A1CBD6B296780E3F1 /* HistoryView.swift */; };
 		C0AA609061AFA027D3999110 /* 01-meeting.wav in Resources */ = {isa = PBXBuildFile; fileRef = 05D050FDCA1C18AD58E4AE94 /* 01-meeting.wav */; };
 		C3F9E4F88969C9E14001BA5D /* 09-filler.wav in Resources */ = {isa = PBXBuildFile; fileRef = 00D8CC7B11E1B22E364DA967 /* 09-filler.wav */; };
@@ -108,8 +110,10 @@
 		92E549F156E576A078A54838 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		95C196B3D5A76156B0B97950 /* TakiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakiApp.swift; sourceTree = "<group>"; };
 		99F699E8D8D36AC5AF73C2C8 /* TakiTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TakiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0D57466FF55C5470BAA635B /* OrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbView.swift; sourceTree = "<group>"; };
 		AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardModel.swift; sourceTree = "<group>"; };
 		B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
+		BA3773B33E9EEB76552A2039 /* Orb.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Orb.metal; sourceTree = "<group>"; };
 		BBD1496F6168C8822D122DD6 /* Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Records.swift; sourceTree = "<group>"; };
 		C065F207F9E55B5D1946FCA3 /* 07-address.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "07-address.wav"; sourceTree = "<group>"; };
 		C0A7EC8EDB94FE53E44A834B /* 04-names.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "04-names.wav"; sourceTree = "<group>"; };
@@ -206,6 +210,8 @@
 				B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */,
 				275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */,
 				61AF860832971072BEB4B031 /* KeyFeedback.swift */,
+				BA3773B33E9EEB76552A2039 /* Orb.metal */,
+				A0D57466FF55C5470BAA635B /* OrbView.swift */,
 			);
 			path = Keyboard;
 			sourceTree = "<group>";
@@ -473,6 +479,8 @@
 				A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */,
 				0C2E3C351E823616B039F551 /* LevelWaveform.swift in Sources */,
 				EEC4E177DA64FAD5EF83CF79 /* MicOrb.swift in Sources */,
+				967AEC9E47F9C9533104E9E8 /* Orb.metal in Sources */,
+				BB17A7701C08A3940DAB5352 /* OrbView.swift in Sources */,
 				DB8258543534801EB3C9C0F8 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

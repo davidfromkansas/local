@@ -8,24 +8,54 @@ struct KeyboardView: View {
     private let spacing: CGFloat = 6
     private let rowSpacing: CGFloat = 11
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(spacing: 0) {
-            MicRow(model: model)
-                .frame(height: 50)
-            GeometryReader { proxy in
-                let unit = max(0, (proxy.size.width - 6 - spacing * 9) / 10)
-                VStack(spacing: rowSpacing) {
-                    characterRow(rows[0])
-                    characterRow(rows[1])
-                        .padding(.horizontal, model.layer == .letters ? (unit + spacing) / 2 : 0)
-                    thirdRow(unit: unit)
-                    bottomRow(unit: unit)
-                }
+            MicBar(model: model)
+                .frame(height: 44)
                 .padding(.horizontal, 3)
+                .padding(.top, 6)
+                .padding(.bottom, 8)
+            ZStack {
+                if showsOrb {
+                    orb
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.85)))
+                } else {
+                    keys
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
+                }
             }
-            .padding(.bottom, 4)
+            .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.15), value: showsOrb)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var showsOrb: Bool { model.state == .recording || model.state == .processing }
+
+    @ViewBuilder private var orb: some View {
+        if OrbView.isSupported {
+            OrbView(model: model)
+                .accessibilityLabel("Voice visualizer")
+        } else {
+            LevelWaveform(levels: model.levels, active: model.state == .recording, mirrored: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var keys: some View {
+        GeometryReader { proxy in
+            let unit = max(0, (proxy.size.width - 6 - spacing * 9) / 10)
+            VStack(spacing: rowSpacing) {
+                characterRow(rows[0])
+                characterRow(rows[1])
+                    .padding(.horizontal, model.layer == .letters ? (unit + spacing) / 2 : 0)
+                thirdRow(unit: unit)
+                bottomRow(unit: unit)
+            }
+            .padding(.horizontal, 3)
+        }
+        .padding(.bottom, 4)
     }
 
     // MARK: Rows
@@ -102,78 +132,50 @@ struct KeyboardView: View {
     }
 }
 
-// MARK: - Mic row
+// MARK: - Mic bar
 
-/// Toolbar-style row above the keys: status on the left, mic in the middle, voice level on the right.
-private struct MicRow: View {
+/// One wide mic button across the keyboard; its label is the status.
+private struct MicBar: View {
     let model: KeyboardModel
-
-    var body: some View {
-        ZStack {
-            HStack(spacing: 0) {
-                Text(model.statusText)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
-                    .contentTransition(.opacity)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Color.clear.frame(width: 72)
-                LevelWaveform(levels: model.levels, active: model.state == .recording, maxHeight: 22)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .clipped()
-            }
-            .padding(.horizontal, 14)
-            MicButton(state: model.state, level: model.levels.last ?? 0) {
-                KeyFeedback.shared.press()
-                model.micTapped()
-            }
-        }
-        .animation(.takiSnappy, value: model.state)
-        .animation(.takiSnappy, value: model.statusText)
-    }
-}
-
-/// The hero control: lights up red while dictating and breathes with the voice level.
-private struct MicButton: View {
-    var state: KeyboardUIState
-    var level: Float
-    var action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let diameter: CGFloat = 40
-
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(Color.takiRecording.opacity(0.25))
-                    .scaleEffect(state == .recording && !reduceMotion ? 1 + CGFloat(level) * 0.35 : 1)
-                    .opacity(state == .recording ? 1 : 0)
-                    .animation(.easeOut(duration: 0.1), value: level)
-                Circle()
-                    .fill(fill)
+        Button {
+            KeyFeedback.shared.press()
+            model.micTapped()
+        } label: {
+            HStack(spacing: 8) {
                 Image(systemName: state == .recording ? "stop.fill" : "mic.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(state == .notReady ? Color.takiAccent : .white)
-                    .opacity(state == .processing ? 0.6 : 1)
                     .symbolEffect(.pulse, options: .repeating, isActive: state == .processing && !reduceMotion)
                     .contentTransition(.symbolEffect(.replace))
+                Text(model.statusText)
+                    .font(.system(size: 16, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .contentTransition(.opacity)
             }
-            .frame(width: diameter, height: diameter)
-            .frame(width: 64, height: 50)
+            .foregroundStyle(state == .notReady ? Color.takiAccent : .white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(fill))
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressScaleStyle(scale: reduceMotion ? 1 : 0.9))
+        .buttonStyle(PressScaleStyle(scale: reduceMotion ? 1 : 0.98))
         .sensoryFeedback(.impact(weight: .medium), trigger: state == .recording)
+        .animation(.takiSnappy, value: state)
+        .animation(.takiSnappy, value: model.statusText)
         .accessibilityLabel(state == .recording ? "Stop dictation" : "Dictate")
+        .accessibilityValue(model.statusText)
     }
+
+    private var state: KeyboardUIState { model.state }
 
     private var fill: Color {
         switch state {
         case .notReady: Color.takiAccent.opacity(0.16)
-        case .ready, .processing: .takiAccent
+        case .ready: .takiAccent
         case .recording: .takiRecording
+        case .processing: Color.takiAccent.opacity(0.7)
         }
     }
 }
