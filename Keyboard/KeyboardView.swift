@@ -10,47 +10,111 @@ struct KeyboardView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    nonisolated private static let space = "keyboard"
+    @State private var barFrame: CGRect = .zero
+    @State private var morph: LavaMorph?
+    @State private var transitionID = 0
+    @State private var orbMounted = false
+    @State private var orbOpacity: Double = 0
+    @State private var gridOpacity: Double = 0
+    @State private var keysOpacity: Double = 1
+    @State private var barVisible = true
+
     var body: some View {
-        VStack(spacing: 0) {
-            if !showsOrb {
-                MicBar(model: model)
+        ZStack {
+            VStack(spacing: 0) {
+                MicBar(model: model, paused: showsOrb && morph == nil)
                     .frame(height: 50)
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { barFrame = $0 }
                     .padding(.horizontal, 3)
                     .padding(.top, 3)
                     .padding(.bottom, 8)
-                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+                    .opacity(barVisible ? 1 : 0)
+                keys
+                    .opacity(keysOpacity)
             }
-            ZStack {
-                if showsOrb {
-                    tappableOrb
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.85)))
-                } else {
-                    keys
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
-                }
+            .allowsHitTesting(!showsOrb)
+            .accessibilityHidden(showsOrb)
+            if orbMounted {
+                tappableOrb
+            }
+            if let morph {
+                MorphView(morph: morph, bar: barFrame)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
         }
-        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.15), value: showsOrb)
+        .coordinateSpace(.named(Self.space))
+        .onAppear {
+            MorphRenderer.warmUp()
+            setResting(orb: showsOrb)
+        }
+        .onChange(of: model.state) { old, new in
+            let wasOrb = Self.showsOrb(old), isOrb = Self.showsOrb(new)
+            if wasOrb != isOrb { transition(toOrb: isOrb, calm: old == .processing ? 0.85 : 0) }
+        }
         .sensoryFeedback(.impact(weight: .medium), trigger: model.state == .recording)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// While listening the orb fills the keyboard; tapping it finishes dictation and brings the keys back.
-    private var tappableOrb: some View {
-        orb
-            .background(OrbGrid())
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard model.state == .recording else { return }
-                KeyFeedback.shared.press()
-                model.micTapped()
+    /// Bar → orb: the lava's wax flies down and becomes the orb; orb → bar plays it backwards.
+    /// Reduce Motion (or no Metal) gets a plain cross-fade.
+    private func transition(toOrb: Bool, calm: Float) {
+        transitionID += 1
+        let id = transitionID
+        let morphs = !reduceMotion && OrbView.isSupported && barFrame.width > 0
+        if toOrb { orbMounted = true }
+        if morphs {
+            morph = LavaMorph(id: id, start: CACurrentMediaTime(), forward: toOrb, calm: calm)
+            if toOrb {
+                withAnimation(.easeOut(duration: 0.3)) { keysOpacity = 0; gridOpacity = 1 }
+                withAnimation(.easeInOut(duration: 0.15).delay(0.62)) { orbOpacity = 1 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    if transitionID == id { barVisible = false }
+                }
+            } else {
+                withAnimation(.linear(duration: 0.08)) { orbOpacity = 0 }
+                withAnimation(.easeInOut(duration: 0.3).delay(0.4)) { keysOpacity = 1; gridOpacity = 0 }
             }
-            .accessibilityElement()
-            .accessibilityLabel(model.state == .recording ? "Stop dictation" : "Finishing")
-            .accessibilityAddTraits(.isButton)
+        } else {
+            morph = nil
+            withAnimation(.easeInOut(duration: 0.2)) { setResting(orb: toOrb) }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + (morphs ? LavaMorph.duration : 0.2)) {
+            guard transitionID == id else { return }
+            setResting(orb: toOrb)
+            morph = nil
+        }
     }
 
-    private var showsOrb: Bool { model.state == .recording || model.state == .processing }
+    private func setResting(orb: Bool) {
+        orbMounted = orb
+        orbOpacity = orb ? 1 : 0
+        gridOpacity = orb ? 1 : 0
+        keysOpacity = orb ? 0 : 1
+        barVisible = !orb
+    }
+
+    /// While listening the orb fills the keyboard; tapping it finishes dictation and brings the keys back.
+    private var tappableOrb: some View {
+        ZStack {
+            OrbGrid().opacity(gridOpacity)
+            orb.opacity(orbOpacity)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard model.state == .recording else { return }
+            KeyFeedback.shared.press()
+            model.micTapped()
+        }
+        .allowsHitTesting(showsOrb)
+        .accessibilityElement()
+        .accessibilityLabel(model.state == .recording ? "Stop dictation" : "Finishing")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var showsOrb: Bool { Self.showsOrb(model.state) }
+    private static func showsOrb(_ state: KeyboardUIState) -> Bool { state == .recording || state == .processing }
 
     @ViewBuilder private var orb: some View {
         if OrbView.isSupported {
@@ -155,6 +219,7 @@ struct KeyboardView: View {
 /// One wide mic button across the keyboard; its label is the status.
 private struct MicBar: View {
     let model: KeyboardModel
+    var paused = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -164,7 +229,7 @@ private struct MicBar: View {
         } label: {
             ZStack {
                 if OrbView.isSupported {
-                    LavaView()
+                    LavaView(paused: paused)
                         .accessibilityHidden(true)
                 } else {
                     Color.takiAccent
