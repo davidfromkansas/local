@@ -12,23 +12,41 @@ struct KeyboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MicBar(model: model)
-                .frame(height: 44)
-                .padding(.horizontal, 3)
-                .padding(.top, 3)
-                .padding(.bottom, 8)
+            if !showsOrb {
+                MicBar(model: model)
+                    .frame(height: 44)
+                    .padding(.horizontal, 3)
+                    .padding(.top, 3)
+                    .padding(.bottom, 8)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+            }
             ZStack {
                 if showsOrb {
-                    orb
+                    tappableOrb
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.85)))
                 } else {
                     keys
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
                 }
             }
-            .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.15), value: showsOrb)
         }
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.15), value: showsOrb)
+        .sensoryFeedback(.impact(weight: .medium), trigger: model.state == .recording)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// While listening the orb fills the keyboard; tapping it finishes dictation and brings the keys back.
+    private var tappableOrb: some View {
+        orb
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard model.state == .recording else { return }
+                KeyFeedback.shared.press()
+                model.micTapped()
+            }
+            .accessibilityElement()
+            .accessibilityLabel(model.state == .recording ? "Stop dictation" : "Finishing")
+            .accessibilityAddTraits(.isButton)
     }
 
     private var showsOrb: Bool { model.state == .recording || model.state == .processing }
@@ -36,7 +54,6 @@ struct KeyboardView: View {
     @ViewBuilder private var orb: some View {
         if OrbView.isSupported {
             OrbView(model: model)
-                .accessibilityLabel("Voice visualizer")
         } else {
             LevelWaveform(levels: model.levels, active: model.state == .recording, mirrored: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -173,7 +190,6 @@ private struct MicBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle(scale: reduceMotion ? 1 : 0.98))
-        .sensoryFeedback(.impact(weight: .medium), trigger: state == .recording)
         .animation(.takiSnappy, value: state)
         .animation(.takiSnappy, value: model.statusText)
         .accessibilityLabel(state == .recording ? "Stop dictation" : "Dictate")
