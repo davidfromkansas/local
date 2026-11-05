@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import TakiCore
+import UIKit
 
 @Observable
 final class KeyboardModel {
@@ -8,10 +9,14 @@ final class KeyboardModel {
 
     private(set) var state: KeyboardUIState = .notReady
     private(set) var levels = [Float](repeating: 0, count: KeyboardModel.barCount)
+    /// Read every frame by the orb renderer, so kept out of SwiftUI observation.
+    @ObservationIgnored private(set) var level: Float = 0
+    @ObservationIgnored private(set) var spectrum: [Float] = []
     private(set) var notice: String?
     var hasFullAccess = true
     var showsGlobeKey = true
     var layer: KeyLayer = .letters
+    var returnKeyType: UIReturnKeyType = .default
     private(set) var shift: ShiftState = .on
 
     enum KeyLayer { case letters, numbers, symbols }
@@ -61,7 +66,14 @@ final class KeyboardModel {
                 try? await Task.sleep(for: .milliseconds(33))
                 guard let self else { return }
                 tick += 1
-                if state == .recording { pushLevel(store?.readLevel() ?? 0) }
+                if state == .recording {
+                    level = store?.readLevel() ?? 0
+                    spectrum = store?.readSpectrum() ?? []
+                    pushLevel(level)
+                } else if level != 0 || !spectrum.isEmpty {
+                    level = 0
+                    spectrum = []
+                }
                 if tick % 15 == 0 { refresh() }
             }
         }
@@ -98,13 +110,15 @@ final class KeyboardModel {
         }
     }
 
+    var micCaption: String? { notice == nil && state == .ready ? nil : statusText }
+
     var statusText: String {
         if let notice { return notice }
         switch state {
-        case .notReady: return hasFullAccess ? "Tap the mic to start Taki" : "Allow Full Access to use Taki"
+        case .notReady: return hasFullAccess ? "Tap to start Taki" : "Allow Full Access to use Taki"
         case .ready: return "Tap to dictate"
         case .recording: return "Listening… tap to finish"
-        case .processing: return "Finishing up…"
+        case .processing: return "Finishing…"
         }
     }
 
@@ -184,6 +198,22 @@ final class KeyboardModel {
     }
 
     // MARK: Typing
+
+    /// Label for the return key, matching what the text field asked for (Send, Search, Go…).
+    var returnLabel: (title: String, isPrimary: Bool) {
+        switch returnKeyType {
+        case .go: ("go", true)
+        case .google, .yahoo, .search: ("search", true)
+        case .join: ("join", true)
+        case .next: ("next", false)
+        case .route: ("route", true)
+        case .send: ("send", true)
+        case .done: ("done", true)
+        case .emergencyCall: ("Emergency", true)
+        case .continue: ("continue", true)
+        default: ("return", false)
+        }
+    }
 
     func type(_ key: String) {
         insertText(layer == .letters && shift != .off ? key.uppercased() : key)

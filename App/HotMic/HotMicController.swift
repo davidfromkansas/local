@@ -289,7 +289,7 @@ final class HotMicController {
         if machine.phase == .capturing, let started = captureStartedAt {
             let elapsed = Date.now.timeIntervalSince(started)
             if let feed = feedSamples {
-                capture.publish(level: Self.feedLevel(feed, at: elapsed))
+                capture.publish(feedWindow: Self.feedWindow(feed, at: elapsed))
             }
             level = capture.level
             if elapsed > Self.maxCaptureSeconds { stopCapture() }
@@ -397,11 +397,10 @@ final class HotMicController {
         #endif
     }
 
-    private static func feedLevel(_ samples: [Float], at seconds: Double) -> Float {
+    private static func feedWindow(_ samples: [Float], at seconds: Double) -> [Float] {
         let start = Int(seconds * 16_000)
-        guard start < samples.count else { return 0 }
-        let window = samples[start..<min(samples.count, start + 800)]
-        return AudioLevel.normalized(rms: AudioLevel.rms(Array(window)))
+        guard start < samples.count else { return [] }
+        return Array(samples[start..<min(samples.count, start + 800)])
     }
 }
 

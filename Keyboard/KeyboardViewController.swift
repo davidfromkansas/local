@@ -5,8 +5,15 @@ final class KeyboardViewController: UIInputViewController {
     private let model = KeyboardModel()
     private var host: UIHostingController<KeyboardView>?
 
+    override func loadView() {
+        let inputView = TakiInputView(frame: .zero, inputViewStyle: .keyboard)
+        inputView.allowsSelfSizing = true
+        self.inputView = inputView
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        KeyFeedback.shared.attach(to: view)
         model.insertText = { [weak self] text in self?.textDocumentProxy.insertText(text) }
         model.deleteBackward = { [weak self] in self?.textDocumentProxy.deleteBackward() }
         model.contextBeforeInput = { [weak self] in self?.textDocumentProxy.documentContextBeforeInput }
@@ -19,7 +26,7 @@ final class KeyboardViewController: UIInputViewController {
         addChild(host)
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
-        let height = view.heightAnchor.constraint(equalToConstant: 262)
+        let height = view.heightAnchor.constraint(equalToConstant: 281)
         height.priority = .defaultHigh
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -53,6 +60,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         model.hasFullAccess = hasFullAccess
+        KeyFeedback.shared.hapticsEnabled = hasFullAccess
+        model.returnKeyType = textDocumentProxy.returnKeyType ?? .default
         model.start()
     }
 
@@ -63,6 +72,7 @@ final class KeyboardViewController: UIInputViewController {
 
     override func textDidChange(_ textInput: (any UITextInput)?) {
         super.textDidChange(textInput)
+        model.returnKeyType = textDocumentProxy.returnKeyType ?? .default
         model.textDidChange()
     }
 

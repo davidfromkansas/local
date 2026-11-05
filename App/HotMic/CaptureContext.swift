@@ -12,6 +12,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
     private var converter: AVAudioConverter?
     private var lastLevelWrite: CFAbsoluteTime = 0
     private var currentLevel: Float = 0
+    private let analyzer = SpectrumAnalyzer()
     private let target = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
 
     init(store: SharedStore) {
@@ -31,6 +32,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
         lock.withLock {
             samples.removeAll(keepingCapacity: true)
             samples.reserveCapacity(16_000 * 30)
+            analyzer.reset()
             isCapturing = true
         }
     }
@@ -44,6 +46,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
             return captured
         }
         store.writeLevel(0)
+        store.writeSpectrum([])
         return captured
     }
 
@@ -54,10 +57,16 @@ nonisolated final class CaptureContext: @unchecked Sendable {
         lock.withLock { index < samples.count ? Array(samples[index...]) : [] }
     }
 
-    /// Used by the DEBUG file feed so the keyboard waveform still moves.
-    func publish(level: Float) {
-        lock.withLock { currentLevel = level }
+    /// Used by the DEBUG file feed so the keyboard visuals still move: `window` is the audio "playing" now.
+    func publish(feedWindow window: [Float]) {
+        let level = AudioLevel.normalized(rms: AudioLevel.rms(window))
+        let bands = lock.withLock {
+            currentLevel = level
+            analyzer.append(window)
+            return analyzer.bands()
+        }
         store.writeLevel(level)
+        store.writeSpectrum(bands)
     }
 
     private func handle(_ buffer: AVAudioPCMBuffer) {
@@ -67,11 +76,13 @@ nonisolated final class CaptureContext: @unchecked Sendable {
             guard isCapturing else { return }
             samples.append(contentsOf: converted)
             currentLevel = level
+            analyzer.append(converted)
         }
         let now = CFAbsoluteTimeGetCurrent()
         if now - lastLevelWrite > 1.0 / 30 {
             lastLevelWrite = now
             store.writeLevel(level)
+            store.writeSpectrum(lock.withLock { analyzer.bands() })
         }
     }
 

@@ -1,55 +1,79 @@
 import SwiftUI
 import TakiCore
 
-/// Full letter keyboard with Taki's mic key in the lower-right corner.
-/// Tap mic → it lights up while dictating; tap again → text is typed in and the letters stay.
+/// Standard iPhone-style QWERTY keyboard with Taki's mic on its own row above the keys.
 struct KeyboardView: View {
     let model: KeyboardModel
 
     private let spacing: CGFloat = 6
+    private let rowSpacing: CGFloat = 11
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
-            statusStrip
-                .frame(height: 34)
-            GeometryReader { proxy in
-                let unit = max(0, (proxy.size.width - spacing * 9 - 6) / 10)
-                VStack(spacing: 11) {
-                    keyRow(rows[0], unit: unit)
-                    keyRow(rows[1], unit: unit)
-                        .padding(.horizontal, model.layer == .letters ? (unit + spacing) / 2 : 0)
-                    thirdRow(unit: unit)
-                    bottomRow(unit: unit)
-                }
-                .padding(.horizontal, 3)
+            if !showsOrb {
+                MicBar(model: model)
+                    .frame(height: 50)
+                    .padding(.horizontal, 3)
+                    .padding(.top, 3)
+                    .padding(.bottom, 8)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
-            .padding(.bottom, 4)
+            ZStack {
+                if showsOrb {
+                    tappableOrb
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.85)))
+                } else {
+                    keys
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
+                }
+            }
         }
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.15), value: showsOrb)
+        .sensoryFeedback(.impact(weight: .medium), trigger: model.state == .recording)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Status
+    /// While listening the orb fills the keyboard; tapping it finishes dictation and brings the keys back.
+    private var tappableOrb: some View {
+        orb
+            .background(OrbGrid())
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard model.state == .recording else { return }
+                KeyFeedback.shared.press()
+                model.micTapped()
+            }
+            .accessibilityElement()
+            .accessibilityLabel(model.state == .recording ? "Stop dictation" : "Finishing")
+            .accessibilityAddTraits(.isButton)
+    }
 
-    private var statusStrip: some View {
-        HStack(spacing: 10) {
-            if model.state == .recording {
-                LevelWaveform(levels: model.levels, active: true, maxHeight: 20, mirrored: true)
-                    .transition(.opacity)
-            }
-            Text(model.statusText)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .contentTransition(.opacity)
-            if model.state == .recording {
-                LevelWaveform(levels: model.levels, active: true, maxHeight: 20)
-                    .transition(.opacity)
-            }
+    private var showsOrb: Bool { model.state == .recording || model.state == .processing }
+
+    @ViewBuilder private var orb: some View {
+        if OrbView.isSupported {
+            OrbView(model: model)
+        } else {
+            LevelWaveform(levels: model.levels, active: model.state == .recording, mirrored: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.horizontal, 12)
-        .animation(.takiSnappy, value: model.state)
-        .animation(.takiSnappy, value: model.statusText)
+    }
+
+    private var keys: some View {
+        GeometryReader { proxy in
+            let unit = max(0, (proxy.size.width - 6 - spacing * 9) / 10)
+            VStack(spacing: rowSpacing) {
+                characterRow(rows[0])
+                characterRow(rows[1])
+                    .padding(.horizontal, model.layer == .letters ? (unit + spacing) / 2 : 0)
+                thirdRow(unit: unit)
+                bottomRow(unit: unit)
+            }
+            .padding(.horizontal, 3)
+        }
+        .padding(.bottom, 4)
     }
 
     // MARK: Rows
@@ -62,11 +86,14 @@ struct KeyboardView: View {
         }
     }
 
-    private func keyRow(_ keys: [String], unit: CGFloat) -> some View {
+    private func shown(_ key: String) -> String {
+        model.layer == .letters && model.shift != .off ? key.uppercased() : key
+    }
+
+    private func characterRow(_ keys: [String]) -> some View {
         HStack(spacing: spacing) {
             ForEach(keys, id: \.self) { key in
-                let shown = model.layer == .letters && model.shift != .off ? key.uppercased() : key
-                KeyButton(title: shown, label: shown) { model.type(key) }
+                KeyButton(title: shown(key), label: shown(key), popup: true) { model.type(key) }
             }
         }
     }
@@ -76,7 +103,7 @@ struct KeyboardView: View {
             Group {
                 switch model.layer {
                 case .letters:
-                    KeyButton(systemImage: shiftImage, label: "Shift", kind: model.shift == .off ? .function : .active) { model.shiftTapped() }
+                    KeyButton(systemImage: shiftImage, label: model.shift == .locked ? "Caps lock" : "Shift", kind: model.shift == .off ? .function : .active) { model.shiftTapped() }
                 case .numbers:
                     KeyButton(title: "#+=", label: "More symbols", kind: .function) { model.layer = .symbols }
                 case .symbols:
@@ -87,8 +114,7 @@ struct KeyboardView: View {
             if model.layer != .letters { Spacer(minLength: 0) }
             HStack(spacing: spacing) {
                 ForEach(rows[2], id: \.self) { key in
-                    let shown = model.layer == .letters && model.shift != .off ? key.uppercased() : key
-                    KeyButton(title: shown, label: shown) { model.type(key) }
+                    KeyButton(title: shown(key), label: shown(key), popup: true) { model.type(key) }
                         .frame(width: model.layer == .letters ? unit : unit * 1.4)
                 }
             }
@@ -100,21 +126,18 @@ struct KeyboardView: View {
 
     private func bottomRow(unit: CGFloat) -> some View {
         HStack(spacing: spacing) {
-            KeyButton(title: model.layer == .letters ? "123" : "ABC", label: model.layer == .letters ? "Numbers" : "Letters", kind: .function) {
+            KeyButton(title: model.layer == .letters ? "123" : "ABC", label: model.layer == .letters ? "Numbers" : "Letters", kind: .function, fontSize: 16) {
                 model.layer = model.layer == .letters ? .numbers : .letters
             }
-            .frame(width: unit * 1.3)
+            .frame(width: unit * (model.showsGlobeKey ? 1.25 : 2.5) + (model.showsGlobeKey ? 0 : spacing))
             if model.showsGlobeKey {
                 KeyButton(systemImage: "globe", label: "Next keyboard", kind: .function) { model.advanceToNextKeyboard() }
-                    .frame(width: unit * 1.1)
+                    .frame(width: unit * 1.25)
             }
             KeyButton(title: "space", label: "Space", fontSize: 16) { model.space() }
-            KeyButton(title: "return", label: "Return", kind: .function, fontSize: 16) { model.returnKey() }
-                .frame(width: unit * 1.9)
-            MicKey(state: model.state, level: model.levels.last ?? 0) {
-                model.micTapped()
-            }
-            .frame(width: unit * 1.3)
+            let returnLabel = model.returnLabel
+            KeyButton(title: returnLabel.title, label: returnLabel.title, kind: returnLabel.isPrimary ? .primary : .function, fontSize: 16) { model.returnKey() }
+                .frame(width: unit * 2.5 + spacing)
         }
     }
 
@@ -127,56 +150,51 @@ struct KeyboardView: View {
     }
 }
 
-// MARK: - Mic key
+// MARK: - Mic bar
 
-/// The hero key: lights up red while dictating, breathes with the voice level.
-private struct MicKey: View {
-    var state: KeyboardUIState
-    var level: Float
-    var action: () -> Void
+/// One wide mic button across the keyboard; its label is the status.
+private struct MicBar: View {
+    let model: KeyboardModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            KeyFeedback.shared.press()
+            model.micTapped()
+        } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(state == .recording ? Color.takiRecording : KeyKind.function.fill)
-                    .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
-                    .scaleEffect(state == .recording && !reduceMotion ? 1 + CGFloat(level) * 0.08 : 1)
-                    .animation(.easeOut(duration: 0.08), value: level)
-                // No spinner while finishing: the words are already in the field, so the mic just
-                // breathes softly until the final text lands.
-                Image(systemName: state == .recording ? "mic.fill" : "mic")
-                    .font(.system(size: 19, weight: .medium))
-                    .foregroundStyle(iconColor)
-                    .opacity(state == .processing ? 0.5 : 1)
-                    .symbolEffect(.pulse, options: .repeating, isActive: state == .processing && !reduceMotion)
-                    .contentTransition(.symbolEffect(.replace))
+                if OrbView.isSupported {
+                    LavaView()
+                        .accessibilityHidden(true)
+                } else {
+                    Color.takiAccent
+                }
+                if let caption {
+                    HStack(spacing: 8) {
+                        Image(systemName: "mic.fill")
+                        Text(caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 3)
+                    .padding(.horizontal, 12)
+                    .transition(.opacity)
+                }
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressScaleKeyStyle())
-        .animation(.takiSnappy, value: state)
-        .sensoryFeedback(.impact(weight: .medium), trigger: state == .recording)
-        .accessibilityLabel(state == .recording ? "Stop dictation" : "Dictate")
+        .buttonStyle(PressScaleStyle(scale: reduceMotion ? 1 : 0.98))
+        .animation(.takiSnappy, value: caption)
+        .accessibilityLabel("Dictate")
+        .accessibilityValue(model.statusText)
     }
 
-    private var iconColor: Color {
-        switch state {
-        case .recording: .white
-        case .ready: .takiAccent
-        case .notReady, .processing: .primary
-        }
-    }
-}
-
-private struct PressScaleKeyStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.takiPress, value: configuration.isPressed)
-    }
+    /// Ready shows just the lava lamp; setup states and notices are written over it.
+    private var caption: String? { OrbView.isSupported ? model.micCaption : model.statusText }
 }
 
 // MARK: - Keys
@@ -185,6 +203,7 @@ private struct PressScaleKeyStyle: ButtonStyle {
 private enum KeyPalette {
     static let character = Color(uiColor: dynamic(light: .white, dark: UIColor(white: 0.42, alpha: 1)))
     static let function = Color(uiColor: dynamic(light: UIColor(red: 0.67, green: 0.69, blue: 0.74, alpha: 1), dark: UIColor(white: 0.27, alpha: 1)))
+    static let primary = Color(uiColor: .systemBlue)
 
     nonisolated private static func dynamic(light: UIColor, dark: UIColor) -> UIColor {
         UIColor { $0.userInterfaceStyle == .dark ? dark : light }
@@ -192,39 +211,45 @@ private enum KeyPalette {
 }
 
 enum KeyKind {
-    case character, function, active
+    case character, function, active, primary
 
     var fill: Color {
         switch self {
         case .character, .active: KeyPalette.character
         case .function: KeyPalette.function
+        case .primary: KeyPalette.primary
         }
     }
 
     var pressedFill: Color {
         switch self {
-        case .character, .active: KeyKind.function.fill
-        case .function: KeyKind.character.fill
+        case .character, .active: KeyPalette.function
+        case .function: KeyPalette.character
+        case .primary: KeyPalette.function
         }
     }
+
+    var foreground: Color { self == .primary ? .white : .primary }
 }
 
 private struct KeyButton: View {
     var title: String?
     var systemImage: String?
     var label: String
-    var kind: KeyKind = .character
-    var fontSize: CGFloat = 22
-    var repeats = false
+    var kind: KeyKind
+    var fontSize: CGFloat
+    var repeats: Bool
+    var popup: Bool
     var action: () -> Void
 
-    init(title: String? = nil, systemImage: String? = nil, label: String, kind: KeyKind = .character, fontSize: CGFloat? = nil, repeats: Bool = false, action: @escaping () -> Void) {
+    init(title: String? = nil, systemImage: String? = nil, label: String, kind: KeyKind = .character, fontSize: CGFloat? = nil, repeats: Bool = false, popup: Bool = false, action: @escaping () -> Void) {
         self.title = title
         self.systemImage = systemImage
         self.label = label
         self.kind = kind
         self.fontSize = fontSize ?? (kind == .character ? 22 : 15)
         self.repeats = repeats
+        self.popup = popup
         self.action = action
     }
 
@@ -240,23 +265,83 @@ private struct KeyButton: View {
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(KeyStyle(kind: kind))
+        .buttonStyle(KeyStyle(kind: kind, popupText: popup ? title : nil))
         .buttonRepeatBehavior(repeats ? .enabled : .disabled)
         .accessibilityLabel(label)
     }
 }
 
-/// System-keyboard-like key: instant color swap on press (keys don't scale).
+/// System-keyboard-like key: instant color swap (or letter popup) on press, haptic + click on touch-down.
 private struct KeyStyle: ButtonStyle {
     var kind: KeyKind
+    var popupText: String?
 
     func makeBody(configuration: Configuration) -> some View {
+        let showPopup = configuration.isPressed && popupText != nil
         configuration.label
-            .foregroundStyle(.primary)
+            .foregroundStyle(kind.foreground)
+            .opacity(showPopup ? 0 : 1)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(configuration.isPressed ? kind.pressedFill : kind.fill)
+                    .fill(configuration.isPressed && popupText == nil ? kind.pressedFill : kind.fill)
                     .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
             )
+            .overlay(alignment: .bottom) {
+                if showPopup, let popupText {
+                    KeyPopup(text: popupText)
+                }
+            }
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { KeyFeedback.shared.press() }
+            }
+    }
+}
+
+/// Enlarged callout above a pressed letter key, like Apple's.
+private struct KeyPopup: View {
+    var text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 34))
+            .foregroundStyle(.primary)
+            .frame(minWidth: 46, maxWidth: .infinity, minHeight: 54)
+            .padding(.horizontal, -4)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(KeyKind.character.fill)
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+            )
+            .offset(y: -50)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Soft white "paper" with a light gray square grid behind the orb.
+private struct OrbGrid: View {
+    @Environment(\.colorScheme) private var colorScheme
+    private let cell: CGFloat = 22
+
+    var body: some View {
+        let dark = colorScheme == .dark
+        Canvas { context, size in
+            var lines = Path()
+            let columns = Int(size.width / cell) + 1, rows = Int(size.height / cell) + 1
+            let x0 = (size.width - CGFloat(columns - 1) * cell) / 2
+            let y0 = (size.height - CGFloat(rows - 1) * cell) / 2
+            for i in 0..<columns {
+                let x = (x0 + CGFloat(i) * cell).rounded() + 0.25
+                lines.move(to: CGPoint(x: x, y: 0))
+                lines.addLine(to: CGPoint(x: x, y: size.height))
+            }
+            for j in 0..<rows {
+                let y = (y0 + CGFloat(j) * cell).rounded() + 0.25
+                lines.move(to: CGPoint(x: 0, y: y))
+                lines.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(lines, with: .color(dark ? .white.opacity(0.07) : Color(white: 0.86)), lineWidth: 0.5)
+        }
+        .background(dark ? Color(white: 0.09) : Color(red: 0.975, green: 0.973, blue: 0.965))
     }
 }
