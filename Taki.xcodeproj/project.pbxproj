@@ -47,6 +47,7 @@
 		D370D380473F8D373034A227 /* TakiEngine in Frameworks */ = {isa = PBXBuildFile; productRef = CD25382AA40E2F2BF7425AE3 /* TakiEngine */; };
 		DB8258543534801EB3C9C0F8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADE909E73247F5651AC6F6B /* Theme.swift */; };
 		EEC4E177DA64FAD5EF83CF79 /* MicOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69D587B4CD2D7D6600C5A5E /* MicOrb.swift */; };
+		F5A5B7CD5481616B020DB99B /* KeyFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61AF860832971072BEB4B031 /* KeyFeedback.swift */; };
 		FF0E848E837511B890B399C3 /* TakiEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 23FC0BC7386225B934D00593 /* TakiEngine */; };
 /* End PBXBuildFile section */
 
@@ -98,6 +99,7 @@
 		59413675E546B8104318B673 /* 03-numbers.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "03-numbers.wav"; sourceTree = "<group>"; };
 		5DABA58368312162B17B94D1 /* LevelWaveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelWaveform.swift; sourceTree = "<group>"; };
 		610B795C2812D6D1A68E8D20 /* Taki.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Taki.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61AF860832971072BEB4B031 /* KeyFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyFeedback.swift; sourceTree = "<group>"; };
 		6F6F6D5DE2B47F40C0D63565 /* clips.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = clips.json; sourceTree = "<group>"; };
 		7155E871C91ECB00AC950E5F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7DD95466B3A1EB1690DCF9EA /* ASRAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRAccuracyTests.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */,
 				B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */,
 				275805904CE4E5BBEB70CAA4 /* KeyboardViewController.swift */,
+				61AF860832971072BEB4B031 /* KeyFeedback.swift */,
 			);
 			path = Keyboard;
 			sourceTree = "<group>";
@@ -464,6 +467,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F5A5B7CD5481616B020DB99B /* KeyFeedback.swift in Sources */,
 				B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */,
 				0356564E2231A273C9657781 /* KeyboardView.swift in Sources */,
 				A83B3440611BFECAC6B0C217 /* KeyboardViewController.swift in Sources */,
