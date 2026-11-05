@@ -200,13 +200,12 @@ final class HotMicController {
 
     // MARK: - Live text
 
-    /// While capturing, re-transcribe every few hundred ms and publish the text so the keyboard
-    /// can type it into the field as the user speaks.
+    /// While capturing, re-transcribe every few hundred ms and publish the raw words so the keyboard
+    /// can type them into the field as the user speaks; the final pass swaps in the cleaned text.
     private func startLiveTranscription() {
         stopLiveTranscription()
         let transcriber = LiveTranscriber(engine: engine)
         let requestID = store.readRequest()?.id
-        let pipeline = makePipeline()
         live = transcriber
         liveRequestID = requestID
         liveSampleCount = 0
@@ -222,10 +221,9 @@ final class HotMicController {
                 guard let raw = try? await transcriber.transcribe() else { continue }
                 // Stopped or cancelled meanwhile: the final pass owns the text now.
                 guard !Task.isCancelled, live === transcriber else { return }
-                let text = pipeline.quickClean(raw)
-                guard text != published else { continue }
-                published = text
-                store.writePartial(DictationResult(requestID: requestID, text: text))
+                guard raw != published else { continue }
+                published = raw
+                store.writePartial(DictationResult(requestID: requestID, text: raw))
                 DarwinNotifications.post(.partialReady)
             }
         }
