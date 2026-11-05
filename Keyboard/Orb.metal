@@ -297,14 +297,57 @@ static float3 morphSource(int i, float2 size, float t) {
     return float3(cx, 5.5 + max(drip - r, 0.0), r);
 }
 
+/// `lavaField` rebuilt for the morph so nothing gets sliced flat by the bar's edge: only the edge pools are
+/// clipped to the bar (and drain away first); mounds and drips end in round caps at the edge, and the
+/// travelling droplets shrink away.
+static float morphLava(float2 p, float4 bar, float box, float t, float k) {
+    p -= bar.xy;
+    float w = bar.z, h = bar.w;
+    float bottom = 4.5;
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float dx = (p.x - w * (fi + 0.5) / 4.0 - lavaWave(t * 0.09 + fi) * 20.0) / 22.0;
+        bottom += h * (0.05 + 0.04 * lavaWave(t * 0.3 + fi * 1.3)) * exp(-dx * dx);
+    }
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float dx = (p.x - w * (fi + 0.5) / 6.0 - lavaWave(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
+        bottom += h * 0.1 * (0.6 + 0.4 * lavaWave(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
+    }
+    float d = max(min((h - bottom) - p.y, p.y - 5.5) + 16.0 * smoothstep(0.0, 0.25, k), box);
+    float shrink = 24.0 * smoothstep(0.0, 0.45, k);
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float cx = w * (fi + 0.5) / 6.0 + lavaWave(t * 0.13 + fi * 1.7) * w * 0.035;
+        float r = 5.5 + 2.0 * lavaHash(fi + 3.0);
+        float rise = h * (0.3 + 0.22 * lavaWave(t * 0.45 + fi * 2.3));
+        float base = h - r;
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, base), float2(cx, min(base, h - 5.0 - max(rise - r, 0.0))), r) + shrink, 8.0);
+    }
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float cx = w * (0.2 + 0.3 * fi) + lavaWave(t * 0.11 + fi * 2.9) * w * 0.05;
+        float r = 4.5 + 1.5 * lavaHash(fi + 7.0);
+        float drip = h * (0.12 + 0.1 * lavaWave(t * 0.37 + fi * 1.9));
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, r), float2(cx, max(r, 5.5 + max(drip - r, 0.0))), r) + shrink, 6.0);
+    }
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float phase = fract(t * 0.065 + lavaHash(fi + 23.0));
+        float y = i != 1 ? mix(h + 2.0, -2.0, phase) : mix(-2.0, h + 2.0, phase);
+        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + lavaWave(t * 0.3 + fi * 4.1) * 6.0;
+        float r = (4.0 + 2.5 * lavaHash(fi + 51.0)) * (1.0 - smoothstep(0.0, 0.3, k));
+        d = lavaSmin(d, max(length(p - float2(x, y)) - r, box), 6.0);
+    }
+    return d;
+}
+
 static float morphField(float2 p, constant MorphUniforms &u) {
     float k = u.progress;
     float blend = mix(6.0, 0.25 * u.radius, 4.0 * k * (1.0 - k));
     float d = 1e4;
     float box = morphBox(p, u.bar, u.corner);
-    if (box < 12.0 && k < 0.6) {
-        d = max(lavaField(p - u.bar.xy, u.bar.zw, u.lavaTime) + 24.0 * smoothstep(0.0, 0.45, k), box);
-    }
+    if (box < 12.0 && k < 0.6) d = morphLava(p, u.bar, box, u.lavaTime, k);
     for (int i = 0; i < 9; i++) {
         float3 s = morphSource(i, u.bar.zw, u.lavaTime);
         float2 a = u.bar.xy + s.xy;
