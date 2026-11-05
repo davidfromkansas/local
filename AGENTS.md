@@ -25,7 +25,7 @@ Keyboard extensions **cannot use the microphone** and have a tight memory limit 
 
 States are a pure value type: `SessionMachine` (inactive → armed → capturing → processing → armed). Keyboard shows `KeyboardUIState` notReady / ready / recording / processing.
 
-Keyboard layout (`Keyboard/KeyboardView.swift`): full QWERTY + 123/#+= layers, auto-capitalize, double-space period. The Taki mic is a key in the **lower-right corner**: tap → it lights up red while dictating, tap again → text is inserted and the letters stay. David's spec — keep it that way.
+Keyboard layout (`Keyboard/KeyboardView.swift`): standard iOS-style QWERTY (shift/caps lock, 123/#+= layers, hold-to-repeat delete, globe only when `needsInputModeSwitchKey`, return label from `returnKeyType`, letter popups, light/dark). Every key press-down plays a light haptic + system click (`KeyFeedback`; haptics need Full Access). The Taki mic sits **centered on its own row above the keys** (`MicRow`: status left, waveform right) — David's spec, keep it there.
 
 ## IPC protocol (App Group `group.com.davidfromkansas.taki`)
 Darwin notifications carry **no payload**, only names `com.davidfromkansas.taki.<signal>`: `start`, `stop`, `cancel` (keyboard → app), `stateChanged`, `partialReady`, `resultReady` (app → keyboard). Data is atomic files in the App Group container (`SharedStore`; files, not UserDefaults, for cross-process freshness):

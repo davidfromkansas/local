@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import TakiCore
+import UIKit
 
 @Observable
 final class KeyboardModel {
@@ -12,6 +13,7 @@ final class KeyboardModel {
     var hasFullAccess = true
     var showsGlobeKey = true
     var layer: KeyLayer = .letters
+    var returnKeyType: UIReturnKeyType = .default
     private(set) var shift: ShiftState = .on
 
     enum KeyLayer { case letters, numbers, symbols }
@@ -101,10 +103,10 @@ final class KeyboardModel {
     var statusText: String {
         if let notice { return notice }
         switch state {
-        case .notReady: return hasFullAccess ? "Tap the mic to start Taki" : "Allow Full Access to use Taki"
+        case .notReady: return hasFullAccess ? "Tap to start Taki" : "Allow Full Access to use Taki"
         case .ready: return "Tap to dictate"
-        case .recording: return "Listening… tap to finish"
-        case .processing: return "Finishing up…"
+        case .recording: return "Listening…"
+        case .processing: return "Finishing…"
         }
     }
 
@@ -184,6 +186,22 @@ final class KeyboardModel {
     }
 
     // MARK: Typing
+
+    /// Label for the return key, matching what the text field asked for (Send, Search, Go…).
+    var returnLabel: (title: String, isPrimary: Bool) {
+        switch returnKeyType {
+        case .go: ("go", true)
+        case .google, .yahoo, .search: ("search", true)
+        case .join: ("join", true)
+        case .next: ("next", false)
+        case .route: ("route", true)
+        case .send: ("send", true)
+        case .done: ("done", true)
+        case .emergencyCall: ("Emergency", true)
+        case .continue: ("continue", true)
+        default: ("return", false)
+        }
+    }
 
     func type(_ key: String) {
         insertText(layer == .letters && shift != .off ? key.uppercased() : key)
