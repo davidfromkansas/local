@@ -91,6 +91,7 @@ targets:
       properties:
         CFBundleDisplayName: Taki
         TakiAppGroup: $(TAKI_APP_GROUP)
+        CADisableMinimumFrameDurationOnPhone: true
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController

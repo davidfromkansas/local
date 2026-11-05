@@ -16,7 +16,7 @@ struct OrbView: UIViewRepresentable {
         view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         view.colorPixelFormat = .bgra8Unorm
         view.depthStencilPixelFormat = .depth32Float
-        view.preferredFramesPerSecond = 60
+        view.preferredFramesPerSecond = 120
         view.isUserInteractionEnabled = false
         context.coordinator.renderer?.attach(to: view)
         return view
@@ -109,18 +109,20 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         buffer.commit()
     }
 
+    /// Smoothing rates are per 60 Hz frame; `ease` rescales them so 120 Hz ProMotion feels the same.
     private func advance(dt: Float) {
+        func ease(_ rate: Float) -> Float { 1 - pow(1 - rate, dt * 60) }
         let target = model?.spectrum ?? []
         for i in bands.indices {
             let goal = i < target.count ? target[i] : 0
-            bands[i] += (goal - bands[i]) * (goal > bands[i] ? 0.55 : 0.12)
+            bands[i] += (goal - bands[i]) * ease(goal > bands[i] ? 0.55 : 0.12)
         }
         let loud = model?.level ?? 0
-        level += (loud - level) * (loud > level ? 0.5 : 0.1)
+        level += (loud - level) * ease(loud > level ? 0.5 : 0.1)
         let voiced: Float = loud > 0.3 ? 1 : 0
-        speaking += (voiced - speaking) * (voiced > speaking ? 0.35 : 0.04)
+        speaking += (voiced - speaking) * ease(voiced > speaking ? 0.35 : 0.04)
         let settling: Float = model?.state == .processing ? 1 : 0
-        calm += (settling - calm) * 0.08
+        calm += (settling - calm) * ease(0.08)
         time += dt * (reduceMotion ? 0.35 : 1) * (1 + speaking * 0.6)
     }
 
@@ -185,7 +187,7 @@ struct LavaView: UIViewRepresentable {
     func makeUIView(context: Context) -> MTKView {
         let view = MTKView(frame: .zero, device: OrbRenderer.device)
         view.colorPixelFormat = .bgra8Unorm
-        view.preferredFramesPerSecond = 60
+        view.preferredFramesPerSecond = 120
         view.isUserInteractionEnabled = false
         view.delegate = context.coordinator
         return view
