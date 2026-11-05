@@ -97,6 +97,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let size = view.drawableSize
         var uniforms = makeUniforms(aspect: Float(size.width / max(1, size.height)))
         var voice = voiceRanges()
+        Self.latest = (uniforms, voice)
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depth)
         encoder.setCullMode(.none)
@@ -133,9 +134,12 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         return SIMD3(mean(0..<third), mean(third..<(2 * third)), mean((2 * third)..<bands.count))
     }
 
+    /// The pose drawn last, so the morph overlay can trace the live orb's exact outline.
+    nonisolated(unsafe) static var latest: (uniforms: OrbUniforms, voice: SIMD3<Float>)?
+
     private static let eyeDistance: Float = 4.3
     private static let fovY: Float = 0.62
-    private static func orbScale(calm: Float) -> Float { 1.12 - 0.14 * calm }
+    static func orbScale(calm: Float) -> Float { 1.12 - 0.14 * calm }
 
     /// On-screen radius (points) of the resting orb in a view `height` points tall.
     static func silhouetteRadius(height: Float, calm: Float) -> Float {
@@ -346,13 +350,20 @@ final class MorphRenderer: NSObject, MTKViewDelegate {
         let linear = Float(min(1, max(0, (CACurrentMediaTime() - morph.start) / LavaMorph.duration)))
         let bounds = view.bounds
         let scale = Float(view.drawableSize.width / bounds.width)
+        let height = Float(bounds.height)
+        let orb = OrbRenderer.latest
+        let calm = orb?.uniforms.calm ?? morph.calm
         var uniforms = MorphUniforms(
-            size: SIMD2(Float(bounds.width), Float(bounds.height)), scale: scale, lavaTime: lavaTime,
-            progress: morph.forward ? linear : 1 - linear, calm: morph.calm, dark: dark ? 1 : 0, pad: 0,
+            orbModel: orb?.uniforms.model ?? simd_float4x4(diagonal: SIMD4(OrbRenderer.orbScale(calm: calm), OrbRenderer.orbScale(calm: calm), OrbRenderer.orbScale(calm: calm), 1)),
             bar: SIMD4(Float(bar.minX), Float(bar.minY), Float(bar.width), Float(bar.height)),
+            voice: SIMD4(orb?.voice ?? .zero, 0),
+            size: SIMD2(Float(bounds.width), height),
             center: SIMD2(Float(bounds.midX), Float(bounds.midY)),
-            radius: OrbRenderer.silhouetteRadius(height: Float(bounds.height), calm: morph.calm),
-            corner: 10)
+            scale: scale, lavaTime: lavaTime, progress: morph.forward ? linear : 1 - linear, calm: calm,
+            dark: dark ? 1 : 0, corner: 10,
+            orbTime: orb?.uniforms.time ?? 0, speaking: orb?.uniforms.speaking ?? 0,
+            level: orb?.uniforms.level ?? 0, motion: orb?.uniforms.motion ?? 1,
+            radius: OrbRenderer.silhouetteRadius(height: height, calm: calm), pad: 0)
         encoder.setRenderPipelineState(pipeline)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<MorphUniforms>.stride, index: 0)
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
@@ -364,15 +375,21 @@ final class MorphRenderer: NSObject, MTKViewDelegate {
 
 /// Must match `MorphUniforms` in Orb.metal.
 struct MorphUniforms {
+    var orbModel: simd_float4x4
+    var bar: SIMD4<Float>
+    var voice: SIMD4<Float>
     var size: SIMD2<Float>
+    var center: SIMD2<Float>
     var scale: Float
     var lavaTime: Float
     var progress: Float
     var calm: Float
     var dark: Float
-    var pad: Float
-    var bar: SIMD4<Float>
-    var center: SIMD2<Float>
-    var radius: Float
     var corner: Float
+    var orbTime: Float
+    var speaking: Float
+    var level: Float
+    var motion: Float
+    var radius: Float
+    var pad: Float
 }

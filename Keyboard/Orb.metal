@@ -71,6 +71,17 @@ static float snoise(float3 v) {
     return 105.0 * dot(m * m, float4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
 }
 
+// Only big, slow lobes (David's reference: 4–6 broad bumps, never wrinkles). Each voice range drives
+// its own lobe field: lows swell the widest lobes, mids and highs the slightly smaller ones.
+static float orbDisplacement(float3 n, float t, float speaking, float level, float3 voice, float motion, float calm) {
+    float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
+    float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
+    float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
+    float idle = 0.075 * wide + 0.035 * mid;
+    float speech = speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight) + 0.04 * level;
+    return (idle + speech * motion) * (1.0 - 0.6 * calm);
+}
+
 vertex VOut orb_vertex(uint vid [[vertex_id]],
                        uint iid [[instance_id]],
                        constant OrbUniforms &u [[buffer(0)]],
@@ -82,17 +93,7 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
     float lat = float(row) / float(u.rows) * M_PI_F;
     float3 n = float3(sin(lat) * cos(lon), cos(lat), sin(lat) * sin(lon));
 
-    // Only big, slow lobes (David's reference: 4–6 broad bumps, never wrinkles). Each voice range drives
-    // its own lobe field: lows swell the widest lobes, mids and highs the slightly smaller ones.
-    float t = u.time;
-    float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
-    float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
-    float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
-
-    float idle = 0.075 * wide + 0.035 * mid;
-    float speech = u.speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight)
-                 + 0.04 * u.level;
-    float d = (idle + speech * u.motion) * (1.0 - 0.6 * u.calm);
+    float d = orbDisplacement(n, u.time, u.speaking, u.level, voice, u.motion, u.calm);
     float e = u.speaking * (voice.x + voice.y + voice.z) / 3.0;
 
     float4 world = u.model * float4(n * (1.0 + d), 1.0);
@@ -245,18 +246,34 @@ fragment float4 lava_fragment(LavaOut in [[stage_in]], constant LavaUniforms &u 
 // arc down across the keyboard, grow and merge into one ball the size of the orb (run backwards to return).
 // Lit like the lava at the start and like the orb at the end so both ends match the real views exactly.
 struct MorphUniforms {
-    float2 size;      // points, whole keyboard
-    float scale;      // pixels per point
-    float lavaTime;   // same clock as the bar
-    float progress;   // 0 = lava bar, 1 = orb
-    float calm;       // the orb's settle amount (it shrinks and dims while finishing)
+    float4x4 orbModel;  // the live orb's model matrix (rotation × scale)
+    float4 bar;         // bar rect in points: x, y, width, height
+    float4 voice;       // the live orb's low / mid / high voice ranges
+    float2 size;        // points, whole keyboard
+    float2 center;      // orb centre, points
+    float scale;        // pixels per point
+    float lavaTime;     // same clock as the bar
+    float progress;     // 0 = lava bar, 1 = orb
+    float calm;         // the orb's settle amount (it shrinks and dims while finishing)
     float dark;
+    float corner;       // bar corner radius
+    float orbTime;
+    float speaking;
+    float level;
+    float motion;
+    float radius;       // the live orb's resting silhouette radius, points
     float pad;
-    float4 bar;       // bar rect in points: x, y, width, height
-    float2 center;    // orb centre, points
-    float radius;     // orb silhouette radius, points
-    float corner;     // bar corner radius
 };
+
+/// Outline radius (points) of the live orb in screen direction `dir` (y down): its lobes at the
+/// silhouette, projected with the orb's camera (eye 4.3 away, 0.62 rad field of view).
+static float orbOutline(float2 dir, constant MorphUniforms &u) {
+    float3x3 m = float3x3(u.orbModel[0].xyz, u.orbModel[1].xyz, u.orbModel[2].xyz);
+    float s = length(m[0]);
+    float3 n = normalize(transpose(m) * float3(dir.x, -dir.y, 0.0));
+    float d = orbDisplacement(n, u.orbTime, u.speaking, u.level, u.voice.xyz, u.motion, u.calm);
+    return u.size.y * 0.5 * tan(asin(min(s * (1.0 + d) / 4.3, 0.99))) / tan(0.31);
+}
 
 static float morphBox(float2 p, float4 rect, float r) {
     float2 q = abs(p - (rect.xy + rect.zw * 0.5)) - rect.zw * 0.5 + r;
@@ -299,8 +316,13 @@ static float morphField(float2 p, constant MorphUniforms &u) {
         float r = mix(s.z, 0.42 * u.radius, f);
         d = lavaSmin(d, length(p - c) - r, blend);
     }
-    float core = u.radius * smoothstep(0.35, 0.92, k);
-    if (core > 0.5) d = lavaSmin(d, length(p - u.center) - core, blend);
+    float grow = smoothstep(0.35, 0.92, k);
+    if (grow > 0.0) {
+        float2 off = p - u.center;
+        float dist = length(off);
+        float outline = dist > 1e-3 ? orbOutline(off / dist, u) : u.radius;
+        d = lavaSmin(d, dist - outline * grow, blend);
+    }
     return d;
 }
 
