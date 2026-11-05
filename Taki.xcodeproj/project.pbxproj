@@ -606,7 +606,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_KEYBOARD_BUNDLE_ID)";
 				PRODUCT_NAME = TakiKeyboard;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -632,7 +632,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID)";
 				PRODUCT_NAME = Taki;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -677,7 +677,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID)";
 				PRODUCT_NAME = Taki;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -786,7 +786,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_KEYBOARD_BUNDLE_ID)";
 				PRODUCT_NAME = TakiKeyboard;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
