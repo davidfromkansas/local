@@ -71,6 +71,17 @@ static float snoise(float3 v) {
     return 105.0 * dot(m * m, float4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
 }
 
+// Only big, slow lobes (David's reference: 4–6 broad bumps, never wrinkles). Each voice range drives
+// its own lobe field: lows swell the widest lobes, mids and highs the slightly smaller ones.
+static float orbDisplacement(float3 n, float t, float speaking, float level, float3 voice, float motion, float calm) {
+    float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
+    float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
+    float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
+    float idle = 0.075 * wide + 0.035 * mid;
+    float speech = speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight) + 0.04 * level;
+    return (idle + speech * motion) * (1.0 - 0.6 * calm);
+}
+
 vertex VOut orb_vertex(uint vid [[vertex_id]],
                        uint iid [[instance_id]],
                        constant OrbUniforms &u [[buffer(0)]],
@@ -82,17 +93,7 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
     float lat = float(row) / float(u.rows) * M_PI_F;
     float3 n = float3(sin(lat) * cos(lon), cos(lat), sin(lat) * sin(lon));
 
-    // Only big, slow lobes (David's reference: 4–6 broad bumps, never wrinkles). Each voice range drives
-    // its own lobe field: lows swell the widest lobes, mids and highs the slightly smaller ones.
-    float t = u.time;
-    float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
-    float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
-    float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
-
-    float idle = 0.075 * wide + 0.035 * mid;
-    float speech = u.speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight)
-                 + 0.04 * u.level;
-    float d = (idle + speech * u.motion) * (1.0 - 0.6 * u.calm);
+    float d = orbDisplacement(n, u.time, u.speaking, u.level, voice, u.motion, u.calm);
     float e = u.speaking * (voice.x + voice.y + voice.z) / 3.0;
 
     float4 world = u.model * float4(n * (1.0 + d), 1.0);
@@ -239,4 +240,201 @@ fragment float4 lava_fragment(LavaOut in [[stage_in]], constant LavaUniforms &u 
     float3 background = mix(float3(0.05, 0.02, 0.10), float3(0.20, 0.07, 0.36), smoothstep(0.1, 1.0, p.y / u.size.y));
     float coverage = clamp(0.5 - d * u.scale, 0.0, 1.0);
     return float4(mix(background, wax, coverage), 1.0);
+}
+
+// The hand-off between the lava bar and the voice orb: the bar's mound tips and drips pinch off as droplets,
+// arc down across the keyboard, grow and merge into one ball the size of the orb (run backwards to return).
+// Lit like the lava at the start and like the orb at the end so both ends match the real views exactly.
+struct MorphUniforms {
+    float4x4 orbModel;  // the live orb's model matrix (rotation × scale)
+    float4 bar;         // bar rect in points: x, y, width, height
+    float4 voice;       // the live orb's low / mid / high voice ranges
+    float2 size;        // points, whole keyboard
+    float2 center;      // orb centre, points
+    float scale;        // pixels per point
+    float lavaTime;     // same clock as the bar
+    float progress;     // 0 = lava bar, 1 = orb
+    float calm;         // the orb's settle amount (it shrinks and dims while finishing)
+    float dark;
+    float corner;       // bar corner radius
+    float orbTime;
+    float speaking;
+    float level;
+    float motion;
+    float radius;       // the live orb's resting silhouette radius, points
+    float pad;
+};
+
+/// Outline radius (points) of the live orb in screen direction `dir` (y down): its lobes at the
+/// silhouette, projected with the orb's camera (eye 4.3 away, 0.62 rad field of view).
+static float orbOutline(float2 dir, constant MorphUniforms &u) {
+    float3x3 m = float3x3(u.orbModel[0].xyz, u.orbModel[1].xyz, u.orbModel[2].xyz);
+    float s = length(m[0]);
+    float3 n = normalize(transpose(m) * float3(dir.x, -dir.y, 0.0));
+    float d = orbDisplacement(n, u.orbTime, u.speaking, u.level, u.voice.xyz, u.motion, u.calm);
+    return u.size.y * 0.5 * tan(asin(min(s * (1.0 + d) / 4.3, 0.99))) / tan(0.31);
+}
+
+static float morphBox(float2 p, float4 rect, float r) {
+    float2 q = abs(p - (rect.xy + rect.zw * 0.5)) - rect.zw * 0.5 + r;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+/// Tip (local xy, radius) of the bar's six rising mounds and three drips, exactly as `lavaField` places them.
+static float3 morphSource(int i, float2 size, float t) {
+    float w = size.x, h = size.y;
+    if (i < 6) {
+        float fi = float(i);
+        float cx = w * (fi + 0.5) / 6.0 + lavaWave(t * 0.13 + fi * 1.7) * w * 0.035;
+        float r = 5.5 + 2.0 * lavaHash(fi + 3.0);
+        float rise = h * (0.3 + 0.22 * lavaWave(t * 0.45 + fi * 2.3));
+        return float3(cx, h - 5.0 - max(rise - r, 0.0), r);
+    }
+    float fi = float(i - 6);
+    float cx = w * (0.2 + 0.3 * fi) + lavaWave(t * 0.11 + fi * 2.9) * w * 0.05;
+    float r = 4.5 + 1.5 * lavaHash(fi + 7.0);
+    float drip = h * (0.12 + 0.1 * lavaWave(t * 0.37 + fi * 1.9));
+    return float3(cx, 5.5 + max(drip - r, 0.0), r);
+}
+
+/// `lavaField` rebuilt for the morph so nothing gets sliced flat by the bar's edge: only the edge pools are
+/// clipped to the bar (and drain away first); mounds and drips end in round caps at the edge, and the
+/// travelling droplets shrink away.
+static float morphLava(float2 p, float4 bar, float box, float t, float k) {
+    p -= bar.xy;
+    float w = bar.z, h = bar.w;
+    float bottom = 4.5;
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float dx = (p.x - w * (fi + 0.5) / 4.0 - lavaWave(t * 0.09 + fi) * 20.0) / 22.0;
+        bottom += h * (0.05 + 0.04 * lavaWave(t * 0.3 + fi * 1.3)) * exp(-dx * dx);
+    }
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float dx = (p.x - w * (fi + 0.5) / 6.0 - lavaWave(t * 0.13 + fi * 1.7) * w * 0.035) / 11.0;
+        bottom += h * 0.1 * (0.6 + 0.4 * lavaWave(t * 0.45 + fi * 2.3)) * exp(-dx * dx);
+    }
+    // Pools as bands that stop at the bar's edge (half-planes would leave an invisible flat wall there
+    // that the smooth-min fuses blobs onto).
+    float pools = min(max((h - bottom) - p.y, p.y - h), max(p.y - 5.5, -p.y));
+    float d = max(pools + 16.0 * smoothstep(0.0, 0.25, k), box);
+    float shrink = 24.0 * smoothstep(0.0, 0.45, k);
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float cx = w * (fi + 0.5) / 6.0 + lavaWave(t * 0.13 + fi * 1.7) * w * 0.035;
+        float r = 5.5 + 2.0 * lavaHash(fi + 3.0);
+        float rise = h * (0.3 + 0.22 * lavaWave(t * 0.45 + fi * 2.3));
+        float base = h - r;
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, base), float2(cx, min(base, h - 5.0 - max(rise - r, 0.0))), r) + shrink, 8.0);
+    }
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float cx = w * (0.2 + 0.3 * fi) + lavaWave(t * 0.11 + fi * 2.9) * w * 0.05;
+        float r = 4.5 + 1.5 * lavaHash(fi + 7.0);
+        float drip = h * (0.12 + 0.1 * lavaWave(t * 0.37 + fi * 1.9));
+        d = lavaSmin(d, lavaCapsule(p, float2(cx, r), float2(cx, max(r, 5.5 + max(drip - r, 0.0))), r) + shrink, 6.0);
+    }
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float phase = fract(t * 0.065 + lavaHash(fi + 23.0));
+        float y = i != 1 ? mix(h + 2.0, -2.0, phase) : mix(-2.0, h + 2.0, phase);
+        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + lavaWave(t * 0.3 + fi * 4.1) * 6.0;
+        float r = (4.0 + 2.5 * lavaHash(fi + 51.0)) * (1.0 - smoothstep(0.0, 0.3, k));
+        d = lavaSmin(d, max(length(p - float2(x, y)) - r, box), 6.0);
+    }
+    return d;
+}
+
+static float morphField(float2 p, constant MorphUniforms &u) {
+    float k = u.progress;
+    float blend = mix(6.0, 0.25 * u.radius, 4.0 * k * (1.0 - k));
+    float d = 1e4;
+    float box = morphBox(p, u.bar, u.corner);
+    if (box < 12.0 && k < 0.6) d = morphLava(p, u.bar, box, u.lavaTime, k);
+    for (int i = 0; i < 9; i++) {
+        float3 s = morphSource(i, u.bar.zw, u.lavaTime);
+        float2 a = u.bar.xy + s.xy;
+        float delay = 0.03 * float(i % 6) + 0.12 * lavaHash(float(i) + 61.0);
+        float f = smoothstep(delay, delay + 0.6, k);
+        float2 end = u.center + (float2(lavaHash(float(i) + 71.0), lavaHash(float(i) + 83.0)) - 0.5) * u.radius * 0.5;
+        float2 ctrl = float2(mix(a.x, u.center.x, 0.2), mix(a.y, u.center.y, 0.85));
+        float2 c = mix(mix(a, ctrl, f), mix(ctrl, end, f), f);
+        float r = mix(s.z, 0.42 * u.radius, f);
+        d = lavaSmin(d, length(p - c) - r, blend);
+    }
+    float grow = smoothstep(0.35, 0.92, k);
+    if (grow > 0.0) {
+        float2 off = p - u.center;
+        float dist = length(off);
+        float outline = dist > 1e-3 ? orbOutline(off / dist, u) : u.radius;
+        d = lavaSmin(d, dist - outline * grow, blend);
+    }
+    return d;
+}
+
+static float morphHeight(float2 p, constant MorphUniforms &u, float dome) {
+    float s = clamp(-morphField(p, u) / dome, 0.0, 1.0);
+    return dome * sqrt(1.0 - (1.0 - s) * (1.0 - s));
+}
+
+fragment float4 morph_fragment(LavaOut in [[stage_in]], constant MorphUniforms &u [[buffer(0)]]) {
+    float2 p = in.position.xy / u.scale;
+    float k = u.progress;
+
+    float box = morphBox(p, u.bar, u.corner);
+    float barAlpha = (1.0 - smoothstep(0.05, 0.4, k)) * clamp(0.5 - box * u.scale, 0.0, 1.0);
+    float3 background = mix(float3(0.05, 0.02, 0.10), float3(0.20, 0.07, 0.36),
+                            smoothstep(0.1, 1.0, (p.y - u.bar.y) / u.bar.w));
+
+    float d = morphField(p, u);
+    float coverage = clamp(0.5 - d * u.scale, 0.0, 1.0);
+    if (coverage <= 0.0 || k >= 1.0) return float4(background * barAlpha, barAlpha);
+
+    float dome = mix(7.0, u.radius, smoothstep(0.25, 1.0, k));
+    float e = 0.6;
+    float hx = morphHeight(p + float2(e, 0), u, dome) - morphHeight(p - float2(e, 0), u, dome);
+    float hy = morphHeight(p + float2(0, e), u, dome) - morphHeight(p - float2(0, e), u, dome);
+    float3 n = normalize(float3(-hx / (2.0 * e), -hy / (2.0 * e), 1.0));
+    // The lumpy outline extruded as a height field shades like a pinwheel; as the ball takes over, light it
+    // as the orb's sphere instead.
+    float sphere = smoothstep(0.45, 0.85, k);
+    if (sphere > 0.0) {
+        float2 off = p - u.center;
+        float dist = length(off);
+        float2 q = off / (dist > 1e-3 ? orbOutline(off / dist, u) : u.radius);
+        float3 ball = float3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
+        n = normalize(mix(n, normalize(ball), sphere));
+    }
+
+    // Lava bar look (matches lava_fragment).
+    float3 light = normalize(float3(-0.35, -0.75, 0.55));
+    float diffuse = max(dot(n, light), 0.0);
+    float spec = pow(max(dot(n, normalize(light + float3(0, 0, 1))), 0.0), 18.0);
+    float rim = pow(1.0 - n.z, 2.0);
+    float3 lava = mix(float3(0.34, 0.15, 0.68), float3(0.63, 0.40, 0.98), 0.3 + 0.7 * diffuse)
+                + rim * float3(0.40, 0.32, 0.55) + spec * float3(1.0, 0.94, 1.0) * 0.55;
+
+    // Orb look (matches orb_fragment at rest; screen y points down).
+    float3 orbLight = normalize(float3(-0.45, -0.75, 0.8));
+    float3 orbFill = normalize(float3(0.6, 0.2, 0.7));
+    float ndl = saturate(dot(n, orbLight) * 0.75 + 0.25);
+    float ndf = saturate(dot(n, orbFill));
+    float ndv = saturate(n.z);
+    float3 h = normalize(orbLight + float3(0, 0, 1));
+    const float3 shadow = float3(0.07, 0.0, 0.14);
+    const float3 base = float3(0.235, 0.02, 0.376);
+    const float3 peak = float3(0.42, 0.06, 0.68);
+    float3 orb = mix(shadow, base, ndl);
+    orb = mix(orb, peak, 0.35 * ndl * 0.45);
+    orb += base * ndf * 0.18;
+    orb *= 0.82;
+    orb *= mix(0.6, 1.0, ndv);
+    orb += float3(0.95, 0.9, 1.0) * (pow(saturate(dot(n, h)), 18.0) * 0.14 + pow(saturate(dot(n, h)), 60.0) * 0.12);
+    orb += float3(0.45, 0.25, 0.75) * pow(1.0 - ndv, 3.0) * 0.5 * u.dark;
+    orb *= 1.0 - 0.2 * u.calm;
+
+    float3 wax = mix(lava, orb, smoothstep(0.25, 0.9, k));
+    coverage *= 1.0 - smoothstep(0.85, 1.0, k);   // cross-fades with the live orb underneath
+    float under = barAlpha * (1.0 - coverage);
+    return float4(wax * coverage + background * under, coverage + under);
 }
