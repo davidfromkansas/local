@@ -159,7 +159,7 @@ struct KeyboardView: View {
     private func characterRow(_ keys: [String]) -> some View {
         HStack(spacing: spacing) {
             ForEach(keys, id: \.self) { key in
-                KeyButton(title: shown(key), label: shown(key), popup: true) { model.type(key) }
+                KeyButton(title: shown(key), label: shown(key)) { model.type(key) }
             }
         }
     }
@@ -180,7 +180,7 @@ struct KeyboardView: View {
             if model.layer != .letters { Spacer(minLength: 0) }
             HStack(spacing: spacing) {
                 ForEach(rows[2], id: \.self) { key in
-                    KeyButton(title: shown(key), label: shown(key), popup: true) { model.type(key) }
+                    KeyButton(title: shown(key), label: shown(key)) { model.type(key) }
                         .frame(width: model.layer == .letters ? unit : unit * 1.4)
                 }
             }
@@ -299,6 +299,8 @@ enum KeyKind {
     var foreground: Color { self == .primary ? .white : .primary }
 }
 
+/// Registers on touch-down (like fast typists expect) with haptic + click; no letter callout.
+/// The hit area reaches halfway into the gaps so no tap lands between keys.
 private struct KeyButton: View {
     var title: String?
     var systemImage: String?
@@ -306,82 +308,73 @@ private struct KeyButton: View {
     var kind: KeyKind
     var fontSize: CGFloat
     var repeats: Bool
-    var popup: Bool
     var action: () -> Void
+    @State private var pressed = false
+    @State private var repeater: Task<Void, Never>?
 
-    init(title: String? = nil, systemImage: String? = nil, label: String, kind: KeyKind = .character, fontSize: CGFloat? = nil, repeats: Bool = false, popup: Bool = false, action: @escaping () -> Void) {
+    init(title: String? = nil, systemImage: String? = nil, label: String, kind: KeyKind = .character, fontSize: CGFloat? = nil, repeats: Bool = false, action: @escaping () -> Void) {
         self.title = title
         self.systemImage = systemImage
         self.label = label
         self.kind = kind
         self.fontSize = fontSize ?? (kind == .character ? 22 : 15)
         self.repeats = repeats
-        self.popup = popup
         self.action = action
     }
 
     var body: some View {
-        Button(action: action) {
-            Group {
-                if let systemImage {
-                    Image(systemName: systemImage).font(.system(size: 17, weight: .regular))
-                } else if let title {
-                    Text(title).font(.system(size: fontSize))
-                }
+        Group {
+            if let systemImage {
+                Image(systemName: systemImage).font(.system(size: 17, weight: .regular))
+            } else if let title {
+                Text(title).font(.system(size: fontSize))
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(KeyStyle(kind: kind, popupText: popup ? title : nil))
-        .buttonRepeatBehavior(repeats ? .enabled : .disabled)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .foregroundStyle(kind.foreground)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(pressed ? kind.pressedFill : kind.fill)
+                .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
+        )
+        .contentShape(KeyHitArea())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in if !pressed { touchDown() } }
+                .onEnded { _ in touchUp() }
+        )
+        .onDisappear { touchUp() }
+        .accessibilityElement()
         .accessibilityLabel(label)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
+    }
+
+    private func touchDown() {
+        pressed = true
+        KeyFeedback.shared.press()
+        action()
+        guard repeats else { return }
+        repeater = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            while !Task.isCancelled {
+                action()
+                try? await Task.sleep(for: .milliseconds(85))
+            }
+        }
+    }
+
+    private func touchUp() {
+        pressed = false
+        repeater?.cancel()
+        repeater = nil
     }
 }
 
-/// System-keyboard-like key: instant color swap (or letter popup) on press, haptic + click on touch-down.
-private struct KeyStyle: ButtonStyle {
-    var kind: KeyKind
-    var popupText: String?
-
-    func makeBody(configuration: Configuration) -> some View {
-        let showPopup = configuration.isPressed && popupText != nil
-        configuration.label
-            .foregroundStyle(kind.foreground)
-            .opacity(showPopup ? 0 : 1)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(configuration.isPressed && popupText == nil ? kind.pressedFill : kind.fill)
-                    .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
-            )
-            .overlay(alignment: .bottom) {
-                if showPopup, let popupText {
-                    KeyPopup(text: popupText)
-                }
-            }
-            .onChange(of: configuration.isPressed) { _, pressed in
-                if pressed { KeyFeedback.shared.press() }
-            }
-    }
-}
-
-/// Enlarged callout above a pressed letter key, like Apple's.
-private struct KeyPopup: View {
-    var text: String
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 34))
-            .foregroundStyle(.primary)
-            .frame(minWidth: 46, maxWidth: .infinity, minHeight: 54)
-            .padding(.horizontal, -4)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(KeyKind.character.fill)
-                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-            )
-            .offset(y: -50)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+/// Key bounds grown by half the key/row gaps, so neighbouring hit areas meet with no dead zone.
+private struct KeyHitArea: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path(rect.insetBy(dx: -3, dy: -5.5))
     }
 }
 

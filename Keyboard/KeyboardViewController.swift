@@ -22,6 +22,7 @@ final class KeyboardViewController: UIInputViewController {
 
         let host = UIHostingController(rootView: KeyboardView(model: model))
         host.view.backgroundColor = .clear
+        host.view.isMultipleTouchEnabled = true
         host.sizingOptions = []
         addChild(host)
         view.addSubview(host.view)
@@ -64,6 +65,17 @@ final class KeyboardViewController: UIInputViewController {
         model.returnKeyType = textDocumentProxy.returnKeyType ?? .default
         model.start()
     }
+
+    /// iOS's edge-swipe recognizers on the keyboard window hold back touches near the screen edges
+    /// (Q, A, P, the bottom row), which drops quick taps. Let touches through immediately.
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        for recognizer in view.window?.gestureRecognizers ?? [] {
+            recognizer.delaysTouchesBegan = false
+        }
+    }
+
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .all }
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
