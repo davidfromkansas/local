@@ -6,6 +6,7 @@ import TakiCore
 struct OrbView: UIViewRepresentable {
     let model: KeyboardModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeUIView(context: Context) -> MTKView {
         let view = MTKView(frame: .zero, device: OrbRenderer.device)
@@ -23,6 +24,7 @@ struct OrbView: UIViewRepresentable {
 
     func updateUIView(_ view: MTKView, context: Context) {
         context.coordinator.renderer?.reduceMotion = reduceMotion
+        context.coordinator.renderer?.dark = colorScheme == .dark
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
@@ -48,6 +50,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     private let pipeline: MTLRenderPipelineState
     private let depth: MTLDepthStencilState
     var reduceMotion = false
+    var dark = false
 
     private var bands = [Float](repeating: 0, count: SpectrumAnalyzer.bandCount)
     private var level: Float = 0
@@ -119,19 +122,19 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         speaking += (voiced - speaking) * (voiced > speaking ? 0.35 : 0.04)
         let settling: Float = model?.state == .processing ? 1 : 0
         calm += (settling - calm) * 0.08
-        time += dt * (reduceMotion ? 0.35 : 1) * (1 + speaking * 0.8)
+        time += dt * (reduceMotion ? 0.35 : 1) * (1 + speaking * 0.6)
     }
 
     private func makeUniforms(aspect: Float) -> OrbUniforms {
         let eye = SIMD3<Float>(0, 0, 4.3)
         let projection = Self.perspective(fovY: 0.62, aspect: aspect, near: 0.1, far: 20)
         let viewMatrix = Self.translation(-eye)
-        let spin = reduceMotion ? 0 : time * 0.18
+        let spin = reduceMotion ? 0 : time * 0.12
         let scale = 0.92 - 0.12 * calm
         let model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(scale)
         return OrbUniforms(viewProjection: projection * viewMatrix, model: model, time: time, level: level,
                            speaking: speaking, calm: calm, cols: Self.cols, rows: Self.rows,
-                           motion: reduceMotion ? 0.5 : 1, pad: 0)
+                           motion: reduceMotion ? 0.5 : 1, dark: dark ? 1 : 0)
     }
 
     private static func perspective(fovY: Float, aspect: Float, near: Float, far: Float) -> simd_float4x4 {
@@ -167,5 +170,5 @@ struct OrbUniforms {
     var cols: UInt32
     var rows: UInt32
     var motion: Float
-    var pad: Float
+    var dark: Float
 }

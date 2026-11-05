@@ -15,7 +15,7 @@ struct OrbUniforms {
     uint cols;
     uint rows;
     float motion;    // 1 normally, lower with Reduce Motion
-    float pad;
+    float dark;      // 1 in dark mode: adds a faint violet rim so the edge reads on a dark keyboard
 };
 
 struct VOut {
@@ -94,14 +94,15 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
 
     float t = u.time;
     float e = bandEnergy(n, t, bands, bandCount);
-    float swell = snoise(n * 1.3 + float3(0.0, t * 0.22, t * 0.1));
-    float churn = snoise(n * 3.2 + float3(t * 0.8, -t * 0.55, t * 0.65));
-    float ripple = snoise(n * 8.5 + float3(-t * 1.4, t * 1.1, t * 0.9));
+    // A few big, slow lobes (the "liquid blob"), plus finer ripples that only appear with voice.
+    float swell = snoise(n * 1.5 + float3(0.0, t * 0.35, t * 0.2));
+    float lobes = snoise(n * 2.3 + float3(t * 0.45, -t * 0.3, t * 0.25));
+    float ripple = snoise(n * 4.8 + float3(-t * 0.9, t * 0.7, t * 0.6));
 
-    float idle = 0.045 * swell + 0.012 * sin(t * 1.4);
-    float voice = u.speaking * (0.16 * e * (0.55 + 0.45 * churn) + 0.07 * churn * (0.3 + e) + 0.035 * ripple * e)
-                + 0.06 * u.level * swell;
-    float d = (idle + voice * u.motion) * (1.0 - 0.65 * u.calm);
+    float idle = 0.07 * swell + 0.04 * lobes;
+    float voice = u.speaking * (0.11 * e * (0.6 + 0.4 * lobes) + 0.05 * lobes + 0.025 * ripple * e)
+                + 0.05 * u.level * swell;
+    float d = (idle + voice * u.motion) * (1.0 - 0.6 * u.calm);
 
     float4 world = u.model * float4(n * (1.0 + d), 1.0);
     VOut out;
@@ -112,32 +113,33 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
     return out;
 }
 
-// Iñigo Quilez cosine palette: teal → cyan → violet as the surface rises.
-static float3 palette(float t) {
-    float3 a = float3(0.32, 0.50, 0.55);
-    float3 b = float3(0.30, 0.30, 0.35);
-    float3 c = float3(1.0, 1.0, 1.0);
-    float3 d = float3(0.62, 0.48, 0.30);
-    return a + b * cos(2.0 * M_PI_F * (c * t + d));
-}
-
+// Glossy deep-purple blob (David's reference): dark valleys, lighter violet on the peaks, soft wet highlights.
 fragment float4 orb_fragment(VOut in [[stage_in]], constant OrbUniforms &u [[buffer(0)]]) {
     float3 eye = float3(0.0, 0.0, 4.3);
     float3 v = normalize(eye - in.world);
     float3 nrm = normalize(cross(dfdx(in.world), dfdy(in.world)));
     if (dot(nrm, v) < 0.0) nrm = -nrm;
 
-    float3 light = normalize(float3(-0.5, 0.8, 0.9));
-    float3 h = normalize(light + v);
-    float ndl = saturate(dot(nrm, light));
+    float3 light = normalize(float3(-0.45, 0.75, 0.8));
+    float3 fill = normalize(float3(0.6, -0.2, 0.7));
+    float ndl = saturate(dot(nrm, light) * 0.75 + 0.25);
+    float ndf = saturate(dot(nrm, fill));
     float ndv = saturate(dot(nrm, v));
-    float fresnel = pow(1.0 - ndv, 3.0);
+    float3 h = normalize(light + v);
 
-    float3 base = palette(0.15 + in.displacement * 2.2 + fresnel * 0.35 + u.time * 0.015);
-    base = mix(base, float3(0.05, 0.47, 0.43), 0.35 * (1.0 - in.energy));
-    float3 color = base * (0.28 + 0.72 * ndl);
-    color += pow(saturate(dot(nrm, h)), 80.0) * 0.9;                 // wet highlight
-    color += fresnel * mix(float3(0.35, 0.85, 0.95), float3(0.85, 0.55, 1.0), in.energy) * 0.8;  // rim
-    color *= 1.0 - 0.25 * u.calm;
+    const float3 shadow = float3(0.07, 0.0, 0.14);    // #12002a
+    const float3 base = float3(0.235, 0.02, 0.376);   // #3c0560
+    const float3 peak = float3(0.42, 0.06, 0.68);     // #6b0fad
+    float3 color = mix(shadow, base, ndl);
+    float rise = saturate(in.displacement * 5.0 + 0.35);
+    color = mix(color, peak, rise * ndl * (0.45 + 0.35 * in.energy));
+    color += base * ndf * 0.18;
+    color *= mix(0.55, 1.0, saturate(in.displacement * 6.0 + 0.6));   // valleys pool shadow
+    color *= mix(0.6, 1.0, ndv);                                        // edges fall off like the reference
+
+    float spec = pow(saturate(dot(nrm, h)), 22.0) * 0.16 + pow(saturate(dot(nrm, h)), 110.0) * 0.28;
+    color += float3(0.95, 0.9, 1.0) * spec;
+    color += float3(0.45, 0.25, 0.75) * pow(1.0 - ndv, 3.0) * 0.5 * u.dark;
+    color *= 1.0 - 0.2 * u.calm;
     return float4(color, 1.0);
 }
