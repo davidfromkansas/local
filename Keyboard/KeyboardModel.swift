@@ -243,6 +243,16 @@ final class KeyboardModel {
         updateAutoShift()
     }
 
+    /// Held delete: removes the word before the cursor (and the spaces after it).
+    func deleteWord() {
+        var context = Substring(contextBeforeInput() ?? "")
+        var count = 0
+        while context.last?.isWhitespace == true { context.removeLast(); count += 1 }
+        while let last = context.last, !last.isWhitespace { context.removeLast(); count += 1 }
+        for _ in 0..<max(count, 1) { deleteBackward() }
+        updateAutoShift()
+    }
+
     /// Single tap toggles shift; a quick double tap locks caps.
     func shiftTapped() {
         let now = Date.now

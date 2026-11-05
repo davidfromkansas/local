@@ -169,8 +169,26 @@ static float lavaHash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 /// Signed distance (points) to the wax; negative inside.
 /// Triangle wave with sin's period and range: everything moves at a constant speed instead of easing.
-static float lavaWave(float x) {
+static float lavaTriangle(float x) {
     return 1.0 - 4.0 * abs(fract(x / 6.2831853 + 0.25) - 0.5);
+}
+/// Two incommensurate triangle waves: motion never repeats exactly and never stops
+/// (the slower wave's speed, 0.35 × 1.618, stays below the main wave's 0.65).
+static float lavaWave(float x) {
+    return 0.65 * lavaTriangle(x) + 0.35 * lavaTriangle(x * 1.618 + 2.1);
+}
+/// Droplet `i` crossing the bar: each trip gets its own speed, lane and size, and it wraps out of
+/// sight past the pools so the reshuffle is never visible. Returns (x, y, radius).
+static float3 lavaDroplet(int i, float w, float h, float t) {
+    float fi = float(i);
+    float travel = t * 0.065 * (0.8 + 0.4 * lavaHash(fi + 91.0)) + lavaHash(fi + 23.0);
+    float trip = floor(travel);
+    float phase = travel - trip;
+    float seed = fi * 17.0 + trip * 7.31;
+    float r = 4.0 + 2.5 * lavaHash(seed + 51.0);
+    float y = i != 1 ? mix(h + r + 2.0, -r - 2.0, phase) : mix(-r - 2.0, h + r + 2.0, phase);
+    float x = w * (0.08 + 0.84 * lavaHash(seed + 37.0)) + lavaWave(t * 0.3 + fi * 4.1) * 6.0;
+    return float3(x, y, r);
 }
 
 static float lavaField(float2 p, float2 size, float t) {
@@ -202,14 +220,8 @@ static float lavaField(float2 p, float2 size, float t) {
         d = lavaSmin(d, lavaCapsule(p, float2(cx, 2.0), float2(cx, 5.5 + max(drip - r, 0.0)), r), 6.0);
     }
     for (int i = 0; i < 3; i++) {
-        float fi = float(i);
-        float speed = 0.065;
-        float phase = fract(t * speed + lavaHash(fi + 23.0));
-        bool rising = i != 1;
-        float y = rising ? mix(h + 2.0, -2.0, phase) : mix(-2.0, h + 2.0, phase);
-        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + lavaWave(t * 0.3 + fi * 4.1) * 6.0;
-        float r = 4.0 + 2.5 * lavaHash(fi + 51.0);
-        d = lavaSmin(d, length(p - float2(x, y)) - r, 6.0);
+        float3 drop = lavaDroplet(i, w, h, t);
+        d = lavaSmin(d, length(p - drop.xy) - drop.z, 6.0);
     }
     return d;
 }
@@ -335,12 +347,9 @@ static float morphLava(float2 p, float4 bar, float box, float t, float k) {
         d = lavaSmin(d, lavaCapsule(p, float2(cx, r), float2(cx, max(r, 5.5 + max(drip - r, 0.0))), r) + shrink, 6.0);
     }
     for (int i = 0; i < 3; i++) {
-        float fi = float(i);
-        float phase = fract(t * 0.065 + lavaHash(fi + 23.0));
-        float y = i != 1 ? mix(h + 2.0, -2.0, phase) : mix(-2.0, h + 2.0, phase);
-        float x = w * (0.08 + 0.84 * lavaHash(fi + 37.0)) + lavaWave(t * 0.3 + fi * 4.1) * 6.0;
-        float r = (4.0 + 2.5 * lavaHash(fi + 51.0)) * (1.0 - smoothstep(0.0, 0.3, k));
-        d = lavaSmin(d, max(length(p - float2(x, y)) - r, box), 6.0);
+        float3 drop = lavaDroplet(i, w, h, t);
+        float r = drop.z * (1.0 - smoothstep(0.0, 0.3, k));
+        d = lavaSmin(d, max(length(p - drop.xy) - r, box), 6.0);
     }
     return d;
 }
