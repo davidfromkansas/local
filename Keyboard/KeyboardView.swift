@@ -158,7 +158,7 @@ private struct MicBar: View {
             .foregroundStyle(state == .notReady ? Color.takiAccent : .white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
-                let shape = RoundedRectangle(cornerRadius: 17, style: .continuous)
+                let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
                 ZStack {
                     shape.fill(fill)
                     if showsSwimmer {
