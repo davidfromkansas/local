@@ -23,10 +23,12 @@ final class KeyboardViewController: UIInputViewController {
         let host = UIHostingController(rootView: KeyboardView(model: model))
         host.view.backgroundColor = .clear
         host.sizingOptions = []
+        // iOS adds a ~16pt top safe-area inset under the keyboard's rounded top; we inset concentrically ourselves.
+        host.safeAreaRegions = []
         addChild(host)
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
-        let height = view.heightAnchor.constraint(equalToConstant: 275)
+        let height = view.heightAnchor.constraint(equalToConstant: 259)
         height.priority = .defaultHigh
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
