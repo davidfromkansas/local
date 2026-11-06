@@ -3,6 +3,7 @@ import UIKit
 
 final class KeyboardViewController: UIInputViewController {
     private let model = KeyboardModel()
+    private let keyTouches = KeyTouches()
     private var host: UIHostingController<KeyboardView>?
 
     override func loadView() {
@@ -20,10 +21,11 @@ final class KeyboardViewController: UIInputViewController {
         model.advanceToNextKeyboard = { [weak self] in self?.advanceToNextInputMode() }
         model.openURL = { [weak self] url in self?.openContainingApp(url) ?? false }
 
-        let host = UIHostingController(rootView: KeyboardView(model: model))
+        let host = UIHostingController(rootView: KeyboardView(model: model, keyTouches: keyTouches))
         host.view.backgroundColor = .clear
         host.view.isMultipleTouchEnabled = true
         host.sizingOptions = []
+        host.safeAreaRegions = []
         addChild(host)
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
@@ -37,6 +39,16 @@ final class KeyboardViewController: UIInputViewController {
             height,
         ])
         host.didMove(toParent: self)
+
+        let touchView = KeyTouchView(touches: keyTouches)
+        touchView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(touchView)
+        NSLayoutConstraint.activate([
+            touchView.leadingAnchor.constraint(equalTo: host.view.leadingAnchor),
+            touchView.trailingAnchor.constraint(equalTo: host.view.trailingAnchor),
+            touchView.topAnchor.constraint(equalTo: host.view.topAnchor),
+            touchView.bottomAnchor.constraint(equalTo: host.view.bottomAnchor),
+        ])
         self.host = host
     }
 

@@ -2,12 +2,14 @@ import SwiftUI
 import UIKit
 import os
 
-/// All key touches go through one multi-touch UIKit view instead of per-key SwiftUI gestures, which drop
-/// very short taps and taps that land while the layout is re-rendering (after shift, return, 123/ABC).
+/// All key touches go through one multi-touch UIKit view laid over the SwiftUI keyboard (a sibling of the
+/// hosting view, not inside it: SwiftUI swallowed touches in the gaps between keys). Per-key SwiftUI
+/// gestures also dropped very short taps and taps during re-renders (after shift, return, 123/ABC).
 /// A touch fires on touch-down and goes to the nearest key, so the gaps between keys have no dead zones.
 @Observable
 final class KeyTouches {
-    nonisolated static let space = "keys"
+    /// KeyboardView's root space, which lines up with `KeyTouchView` (both fill the input view).
+    nonisolated static let space = "keyboard"
     private static let reach: CGFloat = 12
     private static let log = Logger(subsystem: "com.davidfromkansas.taki.keyboard", category: "touches")
 
@@ -21,6 +23,7 @@ final class KeyTouches {
     }
 
     private(set) var pressed: Set<String> = []
+    @ObservationIgnored var enabled = true
     @ObservationIgnored private var keys: [String: Key] = [:]
     @ObservationIgnored private var active: [ObjectIdentifier: String] = [:]
     @ObservationIgnored private var repeaters: [String: Task<Void, Never>] = [:]
@@ -34,7 +37,7 @@ final class KeyTouches {
     }
 
     func began(_ touch: UITouch, at point: CGPoint) {
-        let key = nearest(to: point)
+        let key = enabled ? nearest(to: point) : nil
         Self.log.debug("touch \(point.x, format: .fixed(precision: 1)),\(point.y, format: .fixed(precision: 1)) -> \(key?.id ?? "none", privacy: .public) of \(self.keys.count)")
         guard let key else { return }
         active[ObjectIdentifier(touch)] = key.id
@@ -55,6 +58,8 @@ final class KeyTouches {
         pressed.remove(id)
         repeaters.removeValue(forKey: id)?.cancel()
     }
+
+    func handles(_ point: CGPoint) -> Bool { enabled && nearest(to: point) != nil }
 
     private func nearest(to point: CGPoint) -> Key? {
         var best: (key: Key, distance: CGFloat)?
@@ -87,25 +92,12 @@ final class KeyTouches {
     }
 }
 
-struct KeyTouchSurface: UIViewRepresentable {
-    let touches: KeyTouches
-
-    func makeUIView(context: Context) -> KeyTouchView {
-        let view = KeyTouchView()
-        view.touches = touches
-        return view
-    }
-
-    func updateUIView(_ view: KeyTouchView, context: Context) {
-        view.touches = touches
-    }
-}
-
 final class KeyTouchView: UIView {
-    var touches: KeyTouches?
+    private let touches: KeyTouches?
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(touches: KeyTouches) {
+        self.touches = touches
+        super.init(frame: .zero)
         isMultipleTouchEnabled = true
         backgroundColor = .clear
         isAccessibilityElement = false
@@ -113,6 +105,11 @@ final class KeyTouchView: UIView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    /// Only claims touches near a key; the mic bar and the orb fall through to SwiftUI.
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        touches?.handles(point) ?? false
+    }
 
     override func touchesBegan(_ set: Set<UITouch>, with event: UIEvent?) {
         for touch in set { touches?.began(touch, at: touch.location(in: self)) }

@@ -4,6 +4,7 @@ import TakiCore
 /// Standard iPhone-style QWERTY keyboard with Taki's mic on its own row above the keys.
 struct KeyboardView: View {
     let model: KeyboardModel
+    let keyTouches: KeyTouches
 
     private let spacing: CGFloat = 6
     private let rowSpacing: CGFloat = 11
@@ -19,7 +20,6 @@ struct KeyboardView: View {
     @State private var gridOpacity: Double = 0
     @State private var keysOpacity: Double = 1
     @State private var barVisible = true
-    @State private var keyTouches = KeyTouches()
 
     var body: some View {
         ZStack {
@@ -50,6 +50,7 @@ struct KeyboardView: View {
             MorphRenderer.warmUp()
             setResting(orb: showsOrb)
         }
+        .onChange(of: showsOrb, initial: true) { _, orb in keyTouches.enabled = !orb }
         .onChange(of: model.state) { old, new in
             let wasOrb = Self.showsOrb(old), isOrb = Self.showsOrb(new)
             if wasOrb != isOrb { transition(toOrb: isOrb, calm: old == .processing ? 0.85 : 0) }
@@ -139,10 +140,6 @@ struct KeyboardView: View {
                 bottomRow(unit: unit)
             }
             .padding(.horizontal, 3)
-            .coordinateSpace(.named(KeyTouches.space))
-            .overlay {
-                if !showsOrb { KeyTouchSurface(touches: keyTouches) }
-            }
         }
         .environment(keyTouches)
         .padding(.bottom, 4)
