@@ -56,7 +56,7 @@ public actor TranscriptionEngine {
         self.baseDirectory = baseDirectory ?? URL.applicationSupportDirectory.appending(path: "Taki", directoryHint: .isDirectory)
     }
 
-    public var modelsDirectory: URL { baseDirectory.appending(path: "Models", directoryHint: .isDirectory) }
+    public nonisolated var modelsDirectory: URL { baseDirectory.appending(path: "Models", directoryHint: .isDirectory) }
 
     private func repoDirectory(for choice: ASRModelChoice) -> URL {
         switch choice {
@@ -114,10 +114,16 @@ public actor TranscriptionEngine {
             guard generation == self.generation else { throw CancellationError() }
         }
         let handler: ProgressHandler = { update in
+            // FluidAudio gives the download the first half of its range and compiling the rest.
+            let downloaded = min(update.fractionCompleted / 0.5, 1)
             switch update.phase {
-            case .listing, .downloading:
-                // FluidAudio gives the download the first half of its range and compiling the rest.
-                progress.send(PrepareProgress(stage: .downloading, fraction: min(update.fractionCompleted / 0.5, 1)))
+            case .listing:
+                progress.send(PrepareProgress(stage: .downloading, fraction: downloaded, detail: "listing"))
+            case let .downloading(completedFiles, totalFiles):
+                // Once every file is on disk, Core ML builds the model for this chip, which reports nothing.
+                progress.send(PrepareProgress(
+                    stage: completedFiles >= totalFiles ? .loadingModel : .downloading,
+                    fraction: downloaded, completedFiles: completedFiles, totalFiles: totalFiles))
             case let .compiling(modelName):
                 progress.send(PrepareProgress(stage: .loadingModel, fraction: update.fractionCompleted, detail: modelName))
             }
@@ -231,12 +237,18 @@ public struct PrepareProgress: Sendable, Equatable {
     public var stage: Stage
     /// 0…1 within `stage`.
     public var fraction: Double
+    /// Model being compiled, or "listing" while FluidAudio fetches the file list.
     public var detail: String = ""
+    /// Download only. `totalFiles == 0` means everything was already on disk.
+    public var completedFiles: Int?
+    public var totalFiles: Int?
 
-    public init(stage: Stage, fraction: Double, detail: String = "") {
+    public init(stage: Stage, fraction: Double, detail: String = "", completedFiles: Int? = nil, totalFiles: Int? = nil) {
         self.stage = stage
         self.fraction = fraction
         self.detail = detail
+        self.completedFiles = completedFiles
+        self.totalFiles = totalFiles
     }
 }
 

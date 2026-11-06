@@ -94,6 +94,7 @@ struct HomeView: View {
                 ModelSetupProgress()
             case let .failed(message):
                 Text(message).font(.footnote).foregroundStyle(.red)
+                if !model.setupLog.isEmpty { SetupLogView() }
                 Button("Try again") { Task { await model.prepareModels(restart: true) } }
             default:
                 Text("Download \(model.modelChoice.displayName) (\(model.modelChoice.approximateDownload)) once, over Wi-Fi.")
