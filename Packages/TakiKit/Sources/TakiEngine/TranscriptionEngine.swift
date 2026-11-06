@@ -46,6 +46,9 @@ public actor TranscriptionEngine {
     private var unified: UnifiedAsrManager?
     private var tdt: AsrManager?
     private var vad: VadManager?
+    /// The load in flight, shared by concurrent `prepare` calls (app launch, session start, dictation)
+    /// so a second caller can't `unload()` the models the first one is still loading.
+    private var loading: (choice: ASRModelChoice, task: Task<Void, Error>)?
 
     public init(baseDirectory: URL? = nil) {
         self.baseDirectory = baseDirectory ?? URL.applicationSupportDirectory.appending(path: "Taki", directoryHint: .isDirectory)
@@ -83,6 +86,14 @@ public actor TranscriptionEngine {
     /// Downloads (first time only), compiles and loads the chosen model plus VAD. `progress` is 0…1.
     public func prepare(_ choice: ASRModelChoice, progress: (@Sendable (Double) -> Void)? = nil) async throws {
         if loadedChoice == choice, vad != nil { return }
+        if let loading, loading.choice == choice { return try await loading.task.value }
+        let task = Task { try await self.load(choice, progress: progress) }
+        loading = (choice, task)
+        defer { if loading?.task == task { loading = nil } }
+        try await task.value
+    }
+
+    private func load(_ choice: ASRModelChoice, progress: (@Sendable (Double) -> Void)?) async throws {
         unload()
         let handler: ProgressHandler = { update in progress?(update.fractionCompleted * 0.95) }
 

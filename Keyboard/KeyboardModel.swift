@@ -40,6 +40,10 @@ final class KeyboardModel {
     @ObservationIgnored private var optimistic: (state: KeyboardUIState, until: Date)?
     @ObservationIgnored private var noticeTask: Task<Void, Never>?
     @ObservationIgnored private var lastShiftTap = Date.distantPast
+    /// Local copy of the text before the cursor while delete is held: the host's
+    /// `documentContextBeforeInput` lags (often empty) right after a burst of `deleteBackward()`s.
+    @ObservationIgnored private var deleteShadow: Substring?
+    @ObservationIgnored private var lastDeleteAt = Date.distantPast
 
     static let startURL = URL(string: "taki://start")!
 
@@ -216,12 +220,14 @@ final class KeyboardModel {
     }
 
     func type(_ key: String) {
+        deleteShadow = nil
         insertText(layer == .letters && shift != .off ? key.uppercased() : key)
         if shift == .on { shift = .off }
         if key == "'" && layer != .letters { layer = .letters }
     }
 
     func space() {
+        deleteShadow = nil
         let context = contextBeforeInput() ?? ""
         if context.hasSuffix(" "), let previous = context.dropLast().last, previous.isLetter || previous.isNumber {
             deleteBackward()
@@ -234,13 +240,35 @@ final class KeyboardModel {
     }
 
     func returnKey() {
+        deleteShadow = nil
         insertText("\n")
         updateAutoShift()
     }
 
     func delete() {
+        var context = currentDeleteContext()
+        if !context.isEmpty { context.removeLast() }
+        deleteShadow = context
         deleteBackward()
         updateAutoShift()
+    }
+
+    /// Held delete: removes the word before the cursor (and the spaces after it).
+    func deleteWord() {
+        var context = currentDeleteContext()
+        var count = 0
+        while context.last?.isWhitespace == true { context.removeLast(); count += 1 }
+        while let last = context.last, !last.isWhitespace { context.removeLast(); count += 1 }
+        deleteShadow = context
+        for _ in 0..<max(count, 1) { deleteBackward() }
+        updateAutoShift()
+    }
+
+    private func currentDeleteContext() -> Substring {
+        let now = Date.now
+        defer { lastDeleteAt = now }
+        if let deleteShadow, !deleteShadow.isEmpty, now.timeIntervalSince(lastDeleteAt) < 0.4 { return deleteShadow }
+        return Substring(contextBeforeInput() ?? "")
     }
 
     /// Single tap toggles shift; a quick double tap locks caps.

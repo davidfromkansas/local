@@ -266,7 +266,7 @@ enum LavaClock {
 
     static func advance(reduceMotion: Bool) -> Float {
         let now = CACurrentMediaTime()
-        time += Float(min(0.1, now - last)) * (reduceMotion ? 0.3 : 1.3)
+        time += Float(min(0.1, now - last)) * (reduceMotion ? 0.3 : 1.95)
         last = now
         return time
     }

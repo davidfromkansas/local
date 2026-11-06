@@ -119,6 +119,9 @@ private struct DownloadPage: View {
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
+            case .loading:
+                ProgressView("Getting the model ready…")
+                    .font(.footnote)
             case .ready:
                 PrimaryButton("Continue") { onContinue() }
             case let .failed(message):

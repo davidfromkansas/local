@@ -4,6 +4,7 @@ import TakiCore
 /// Standard iPhone-style QWERTY keyboard with Taki's mic on its own row above the keys.
 struct KeyboardView: View {
     let model: KeyboardModel
+    let keyTouches: KeyTouches
 
     private let spacing: CGFloat = 6
     private let rowSpacing: CGFloat = 11
@@ -49,6 +50,7 @@ struct KeyboardView: View {
             MorphRenderer.warmUp()
             setResting(orb: showsOrb)
         }
+        .onChange(of: showsOrb, initial: true) { _, orb in keyTouches.enabled = !orb }
         .onChange(of: model.state) { old, new in
             let wasOrb = Self.showsOrb(old), isOrb = Self.showsOrb(new)
             if wasOrb != isOrb { transition(toOrb: isOrb, calm: old == .processing ? 0.85 : 0) }
@@ -139,6 +141,7 @@ struct KeyboardView: View {
             }
             .padding(.horizontal, 3)
         }
+        .environment(keyTouches)
         .padding(.bottom, 4)
     }
 
@@ -159,7 +162,7 @@ struct KeyboardView: View {
     private func characterRow(_ keys: [String]) -> some View {
         HStack(spacing: spacing) {
             ForEach(keys, id: \.self) { key in
-                KeyButton(title: shown(key), label: shown(key), popup: true) { model.type(key) }
+                KeyButton(id: "key:" + key, title: shown(key), label: shown(key)) { model.type(key) }
             }
         }
     }
@@ -169,40 +172,40 @@ struct KeyboardView: View {
             Group {
                 switch model.layer {
                 case .letters:
-                    KeyButton(systemImage: shiftImage, label: model.shift == .locked ? "Caps lock" : "Shift", kind: model.shift == .off ? .function : .active) { model.shiftTapped() }
+                    KeyButton(id: "shift", systemImage: shiftImage, label: model.shift == .locked ? "Caps lock" : "Shift", kind: model.shift == .off ? .function : .active) { model.shiftTapped() }
                 case .numbers:
-                    KeyButton(title: "#+=", label: "More symbols", kind: .function) { model.layer = .symbols }
+                    KeyButton(id: "symbols", title: "#+=", label: "More symbols", kind: .function) { model.layer = .symbols }
                 case .symbols:
-                    KeyButton(title: "123", label: "Numbers", kind: .function) { model.layer = .numbers }
+                    KeyButton(id: "numbers", title: "123", label: "Numbers", kind: .function) { model.layer = .numbers }
                 }
             }
             .frame(width: unit * 1.35)
             if model.layer != .letters { Spacer(minLength: 0) }
             HStack(spacing: spacing) {
                 ForEach(rows[2], id: \.self) { key in
-                    KeyButton(title: shown(key), label: shown(key), popup: true) { model.type(key) }
+                    KeyButton(id: "key:" + key, title: shown(key), label: shown(key)) { model.type(key) }
                         .frame(width: model.layer == .letters ? unit : unit * 1.4)
                 }
             }
             if model.layer != .letters { Spacer(minLength: 0) }
-            KeyButton(systemImage: "delete.left", label: "Delete", kind: .function, repeats: true) { model.delete() }
+            KeyButton(id: "delete", systemImage: "delete.left", label: "Delete", kind: .function, repeats: true, wordRepeat: model.deleteWord) { model.delete() }
                 .frame(width: unit * 1.35)
         }
     }
 
     private func bottomRow(unit: CGFloat) -> some View {
         HStack(spacing: spacing) {
-            KeyButton(title: model.layer == .letters ? "123" : "ABC", label: model.layer == .letters ? "Numbers" : "Letters", kind: .function, fontSize: 16) {
+            KeyButton(id: "layer", title: model.layer == .letters ? "123" : "ABC", label: model.layer == .letters ? "Numbers" : "Letters", kind: .function, fontSize: 16) {
                 model.layer = model.layer == .letters ? .numbers : .letters
             }
             .frame(width: unit * (model.showsGlobeKey ? 1.25 : 2.5) + (model.showsGlobeKey ? 0 : spacing))
             if model.showsGlobeKey {
-                KeyButton(systemImage: "globe", label: "Next keyboard", kind: .function) { model.advanceToNextKeyboard() }
+                KeyButton(id: "globe", systemImage: "globe", label: "Next keyboard", kind: .function) { model.advanceToNextKeyboard() }
                     .frame(width: unit * 1.25)
             }
-            KeyButton(title: "space", label: "Space", fontSize: 16) { model.space() }
+            KeyButton(id: "space", title: "space", label: "Space", fontSize: 16) { model.space() }
             let returnLabel = model.returnLabel
-            KeyButton(title: returnLabel.title, label: returnLabel.title, kind: returnLabel.isPrimary ? .primary : .function, fontSize: 16) { model.returnKey() }
+            KeyButton(id: "return", title: returnLabel.title, label: returnLabel.title, kind: returnLabel.isPrimary ? .primary : .function, fontSize: 16) { model.returnKey() }
                 .frame(width: unit * 2.5 + spacing)
         }
     }
@@ -299,89 +302,55 @@ enum KeyKind {
     var foreground: Color { self == .primary ? .white : .primary }
 }
 
+/// Key face only: touches are handled for the whole key area by `KeyTouchSurface`.
 private struct KeyButton: View {
+    var id: String
     var title: String?
     var systemImage: String?
     var label: String
     var kind: KeyKind
     var fontSize: CGFloat
     var repeats: Bool
-    var popup: Bool
+    var wordRepeat: (() -> Void)?
     var action: () -> Void
+    @Environment(KeyTouches.self) private var touches
+    @State private var token = UUID()
 
-    init(title: String? = nil, systemImage: String? = nil, label: String, kind: KeyKind = .character, fontSize: CGFloat? = nil, repeats: Bool = false, popup: Bool = false, action: @escaping () -> Void) {
+    init(id: String, title: String? = nil, systemImage: String? = nil, label: String, kind: KeyKind = .character, fontSize: CGFloat? = nil, repeats: Bool = false, wordRepeat: (() -> Void)? = nil, action: @escaping () -> Void) {
+        self.id = id
         self.title = title
         self.systemImage = systemImage
         self.label = label
         self.kind = kind
         self.fontSize = fontSize ?? (kind == .character ? 22 : 15)
         self.repeats = repeats
-        self.popup = popup
+        self.wordRepeat = wordRepeat
         self.action = action
     }
 
     var body: some View {
-        Button(action: action) {
-            Group {
-                if let systemImage {
-                    Image(systemName: systemImage).font(.system(size: 17, weight: .regular))
-                } else if let title {
-                    Text(title).font(.system(size: fontSize))
-                }
+        Group {
+            if let systemImage {
+                Image(systemName: systemImage).font(.system(size: 17, weight: .regular))
+            } else if let title {
+                Text(title).font(.system(size: fontSize))
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(KeyStyle(kind: kind, popupText: popup ? title : nil))
-        .buttonRepeatBehavior(repeats ? .enabled : .disabled)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .foregroundStyle(kind.foreground)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(touches.pressed.contains(id) ? kind.pressedFill : kind.fill)
+                .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
+        )
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(KeyTouches.space)) } action: { frame in
+            touches.register(KeyTouches.Key(id: id, token: token, frame: frame, repeats: repeats, action: action, wordRepeat: wordRepeat))
+        }
+        .onDisappear { touches.unregister(id, token: token) }
+        .accessibilityElement()
         .accessibilityLabel(label)
-    }
-}
-
-/// System-keyboard-like key: instant color swap (or letter popup) on press, haptic + click on touch-down.
-private struct KeyStyle: ButtonStyle {
-    var kind: KeyKind
-    var popupText: String?
-
-    func makeBody(configuration: Configuration) -> some View {
-        let showPopup = configuration.isPressed && popupText != nil
-        configuration.label
-            .foregroundStyle(kind.foreground)
-            .opacity(showPopup ? 0 : 1)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(configuration.isPressed && popupText == nil ? kind.pressedFill : kind.fill)
-                    .shadow(color: .black.opacity(0.25), radius: 0, y: 1)
-            )
-            .overlay(alignment: .bottom) {
-                if showPopup, let popupText {
-                    KeyPopup(text: popupText)
-                }
-            }
-            .onChange(of: configuration.isPressed) { _, pressed in
-                if pressed { KeyFeedback.shared.press() }
-            }
-    }
-}
-
-/// Enlarged callout above a pressed letter key, like Apple's.
-private struct KeyPopup: View {
-    var text: String
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 34))
-            .foregroundStyle(.primary)
-            .frame(minWidth: 46, maxWidth: .infinity, minHeight: 54)
-            .padding(.horizontal, -4)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(KeyKind.character.fill)
-                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-            )
-            .offset(y: -50)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
     }
 }
 
