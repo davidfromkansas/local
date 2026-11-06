@@ -7,15 +7,15 @@ import TakiCore
 public enum ASRModelChoice: String, CaseIterable, Codable, Sendable, Identifiable {
     /// Parakeet Unified 0.6B English, batch (full-attention 15 s encoder), fp16 encoder.
     case parakeetUnified
-    /// Parakeet TDT 0.6B v2 English — fallback option.
+    /// Parakeet TDT 0.6B v2 English: the default, verified to load on iPhone in seconds.
     case parakeetTDTv2
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
-        case .parakeetUnified: "Parakeet Unified (recommended)"
-        case .parakeetTDTv2: "Parakeet TDT v2"
+        case .parakeetUnified: "Parakeet Unified (experimental)"
+        case .parakeetTDTv2: "Parakeet TDT v2 (recommended)"
         }
     }
 

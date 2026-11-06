@@ -48,7 +48,7 @@ final class AppModel {
 
     init() {
         UserDefaults.standard.register(defaults: [
-            SettingsKey.model: ASRModelChoice.parakeetUnified.rawValue,
+            SettingsKey.model: ASRModelChoice.parakeetTDTv2.rawValue,
             SettingsKey.timeout: 0.0, // Never: stay on until the user ends it
             SettingsKey.cleanup: true,
             SettingsKey.debugFeed: false,
@@ -59,7 +59,7 @@ final class AppModel {
             fatalError("Could not open the history database: \(error)")
         }
         hotMic = HotMicController(engine: engine)
-        hotMic.modelChoice = { [weak self] in self?.modelChoice ?? .parakeetUnified }
+        hotMic.modelChoice = { [weak self] in self?.modelChoice ?? .parakeetTDTv2 }
         hotMic.dictionaryProvider = { [container] in
             let words = (try? container.mainContext.fetch(FetchDescriptor<DictionaryWord>())) ?? []
             return words.map(\.entry)
@@ -71,7 +71,13 @@ final class AppModel {
     }
 
     var modelChoice: ASRModelChoice {
-        ASRModelChoice(rawValue: UserDefaults.standard.string(forKey: SettingsKey.model) ?? "") ?? .parakeetUnified
+        ASRModelChoice(rawValue: UserDefaults.standard.string(forKey: SettingsKey.model) ?? "") ?? .parakeetTDTv2
+    }
+
+    /// Picks another model and loads it, abandoning whatever was loading.
+    func switchModel(to choice: ASRModelChoice) async {
+        UserDefaults.standard.set(choice.rawValue, forKey: SettingsKey.model)
+        await prepareModels(restart: true)
     }
 
     var isModelReady: Bool { modelStatus == .ready }
@@ -111,7 +117,13 @@ final class AppModel {
         }
         log("$ taki setup \(choice.rawValue)")
         log("model: \(choice.displayName) · \(choice.approximateDownload)")
-        log(modelStatus == .loading ? "model files found on this iPhone" : "model not on this iPhone yet, downloading from huggingface.co")
+        if modelStatus == .loading {
+            compileStartedAt = .now
+            log("model files found on this iPhone")
+            log("building the model for this iPhone's chip (first time only)…")
+        } else {
+            log("model not on this iPhone yet, downloading from huggingface.co")
+        }
         let meter = meterDownload(generation: generation)
 
         let watchdog = Task { [weak self] in
