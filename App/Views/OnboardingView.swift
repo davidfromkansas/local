@@ -111,23 +111,62 @@ private struct DownloadPage: View {
             switch model.modelStatus {
             case .notDownloaded:
                 PrimaryButton("Download") { Task { await model.prepareModels() } }
-            case let .downloading(fraction):
-                VStack(spacing: 10) {
-                    ProgressView(value: fraction)
-                        .animation(.linear(duration: 0.2), value: fraction)
-                    Text(fraction < 0.999 ? "Downloading… \(Int(fraction * 100))%" : "Getting the model ready…")
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            case .loading:
-                ProgressView("Getting the model ready…")
-                    .font(.footnote)
+            case .downloading, .loading:
+                ModelSetupProgress()
             case .ready:
                 PrimaryButton("Continue") { onContinue() }
             case let .failed(message):
                 Text(message).font(.footnote).foregroundStyle(.red).multilineTextAlignment(.center)
-                PrimaryButton("Try again") { Task { await model.prepareModels() } }
+                PrimaryButton("Try again") { Task { await model.prepareModels(restart: true) } }
             }
+        }
+    }
+}
+
+/// Progress for the model download/load, step by step, with a way out if it stops moving.
+struct ModelSetupProgress: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if case let .downloading(fraction) = model.modelStatus {
+                ProgressView(value: fraction)
+                    .animation(.linear(duration: 0.2), value: fraction)
+            } else {
+                ProgressView()
+            }
+            TimelineView(.periodic(from: model.modelStepStartedAt, by: 1)) { context in
+                Text(statusLine(now: context.date))
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            if model.modelStalled {
+                Text("This is taking longer than it should.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Start over") { Task { await model.prepareModels(restart: true) } }
+                    .buttonStyle(.bordered)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func statusLine(now: Date) -> String {
+        let elapsed = Int(max(0, now.timeIntervalSince(model.modelStepStartedAt)))
+        let clock = String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        switch model.modelProgress?.stage {
+        case .downloading, nil:
+            if case let .downloading(fraction) = model.modelStatus {
+                return "Downloading… \(Int(fraction * 100))% · keep Taki open"
+            }
+            return "Getting the model ready… \(clock)"
+        case .loadingModel:
+            return "Getting the model ready for this iPhone… \(clock)\nThe first time, this can take a couple of minutes."
+        case .loadingVAD:
+            return "Loading the voice detector… \(clock)"
+        case .warmingUp:
+            return "Almost ready… \(clock)"
         }
     }
 }

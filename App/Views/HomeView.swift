@@ -77,18 +77,24 @@ struct HomeView: View {
         .animation(.takiSnappy, value: hotMic.phase)
     }
 
+    private var modelCardTitle: String {
+        switch model.modelStatus {
+        case .loading: "Loading speech model…"
+        case .downloading: "Downloading speech model…"
+        default: "Speech model not ready"
+        }
+    }
+
     private var modelCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(model.modelStatus == .loading ? "Loading speech model…" : "Speech model not ready", systemImage: "arrow.down.circle")
+            Label(modelCardTitle, systemImage: "arrow.down.circle")
                 .font(.headline)
             switch model.modelStatus {
-            case .loading:
-                ProgressView()
-            case let .downloading(fraction):
-                ProgressView(value: fraction)
+            case .loading, .downloading:
+                ModelSetupProgress()
             case let .failed(message):
                 Text(message).font(.footnote).foregroundStyle(.red)
-                Button("Try again") { Task { await model.prepareModels() } }
+                Button("Try again") { Task { await model.prepareModels(restart: true) } }
             default:
                 Text("Download \(model.modelChoice.displayName) (\(model.modelChoice.approximateDownload)) once, over Wi-Fi.")
                     .font(.subheadline)
