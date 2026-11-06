@@ -48,7 +48,9 @@ public actor TranscriptionEngine {
     private var vad: VadManager?
     /// The load in flight, shared by concurrent `prepare` calls (app launch, session start, dictation)
     /// so a second caller can't `unload()` the models the first one is still loading.
-    private var loading: (choice: ASRModelChoice, task: Task<Void, Error>)?
+    private var loading: (choice: ASRModelChoice, task: Task<Void, Error>, progress: PrepareProgressFanout)?
+    /// Bumped by every new load, so a superseded (restarted) load can't install its models.
+    private var generation = 0
 
     public init(baseDirectory: URL? = nil) {
         self.baseDirectory = baseDirectory ?? URL.applicationSupportDirectory.appending(path: "Taki", directoryHint: .isDirectory)
@@ -83,25 +85,50 @@ public actor TranscriptionEngine {
         return configuration
     }
 
-    /// Downloads (first time only), compiles and loads the chosen model plus VAD. `progress` is 0…1.
-    public func prepare(_ choice: ASRModelChoice, progress: (@Sendable (Double) -> Void)? = nil) async throws {
-        if loadedChoice == choice, vad != nil { return }
-        if let loading, loading.choice == choice { return try await loading.task.value }
-        let task = Task { try await self.load(choice, progress: progress) }
-        loading = (choice, task)
+    /// Downloads (first time only), compiles and loads the chosen model plus VAD.
+    /// `restart` abandons a load in flight (e.g. one that seems stuck) and starts over.
+    public func prepare(
+        _ choice: ASRModelChoice,
+        restart: Bool = false,
+        progress: (@Sendable (PrepareProgress) -> Void)? = nil
+    ) async throws {
+        if !restart, loadedChoice == choice, vad != nil { return }
+        if !restart, let loading, loading.choice == choice {
+            if let progress { loading.progress.add(progress) }
+            return try await loading.task.value
+        }
+        loading?.task.cancel()
+        generation += 1
+        let fanout = PrepareProgressFanout()
+        if let progress { fanout.add(progress) }
+        let task = Task { [generation] in try await self.load(choice, generation: generation, progress: fanout) }
+        loading = (choice, task, fanout)
         defer { if loading?.task == task { loading = nil } }
         try await task.value
     }
 
-    private func load(_ choice: ASRModelChoice, progress: (@Sendable (Double) -> Void)?) async throws {
+    private func load(_ choice: ASRModelChoice, generation: Int, progress: PrepareProgressFanout) async throws {
         unload()
-        let handler: ProgressHandler = { update in progress?(update.fractionCompleted * 0.95) }
+        func current() throws {
+            try Task.checkCancellation()
+            guard generation == self.generation else { throw CancellationError() }
+        }
+        let handler: ProgressHandler = { update in
+            switch update.phase {
+            case .listing, .downloading:
+                // FluidAudio gives the download the first half of its range and compiling the rest.
+                progress.send(PrepareProgress(stage: .downloading, fraction: min(update.fractionCompleted / 0.5, 1)))
+            case let .compiling(modelName):
+                progress.send(PrepareProgress(stage: .loadingModel, fraction: update.fractionCompleted, detail: modelName))
+            }
+        }
 
         switch choice {
         case .parakeetUnified:
             // fp16 encoder: the int8 one fails to load on A-series chips (FluidAudio issue #828).
             let manager = UnifiedAsrManager(configuration: Self.modelConfiguration(), encoderPrecision: .fp16)
             try await manager.loadModels(to: modelsDirectory, progressHandler: handler)
+            try current()
             unified = manager
         case .parakeetTDTv2:
             let models = try await AsrModels.downloadAndLoad(
@@ -110,19 +137,24 @@ public actor TranscriptionEngine {
                 version: .v2,
                 progressHandler: handler
             )
+            try current()
             let manager = AsrManager(config: .default)
             try await manager.loadModels(models)
+            try current()
             tdt = manager
         }
 
+        progress.send(PrepareProgress(stage: .loadingVAD, fraction: 1))
         var vadConfig = VadConfig.default
         vadConfig.computeUnits = .cpuAndNeuralEngine
-        vad = try await VadManager(config: vadConfig, modelDirectory: baseDirectory)
+        let vad = try await VadManager(config: vadConfig, modelDirectory: baseDirectory)
+        try current()
+        self.vad = vad
         loadedChoice = choice
 
         // Warm-up pass so the first real dictation doesn't pay Core ML's first-run cost.
+        progress.send(PrepareProgress(stage: .warmingUp, fraction: 1))
         _ = try? await transcribeRaw([Float](repeating: 0, count: 16_000))
-        progress?(1)
     }
 
     public func unload() {
@@ -182,5 +214,51 @@ public enum AudioLevel {
         guard rms > 0 else { return 0 }
         let db = 20 * log10(rms)
         return min(1, max(0, 1 - abs(db / 50)))
+    }
+}
+
+/// Where `TranscriptionEngine.prepare` is, so the UI can say what it's doing instead of one long spinner.
+public struct PrepareProgress: Sendable, Equatable {
+    public enum Stage: Sendable, Equatable {
+        /// Fetching model files (first time only, or when the copy on disk is incomplete).
+        case downloading
+        /// Compiling / loading the Core ML models. Slow the first time on a device.
+        case loadingModel
+        case loadingVAD
+        case warmingUp
+    }
+
+    public var stage: Stage
+    /// 0…1 within `stage`.
+    public var fraction: Double
+    public var detail: String = ""
+
+    public init(stage: Stage, fraction: Double, detail: String = "") {
+        self.stage = stage
+        self.fraction = fraction
+        self.detail = detail
+    }
+}
+
+/// Fans one load's progress out to every caller waiting on it; late joiners get the latest value.
+final class PrepareProgressFanout: @unchecked Sendable {
+    private let lock = NSLock()
+    private var observers: [@Sendable (PrepareProgress) -> Void] = []
+    private var latest: PrepareProgress?
+
+    func add(_ observer: @escaping @Sendable (PrepareProgress) -> Void) {
+        let latest = lock.withLock {
+            observers.append(observer)
+            return self.latest
+        }
+        if let latest { observer(latest) }
+    }
+
+    func send(_ progress: PrepareProgress) {
+        let observers = lock.withLock {
+            latest = progress
+            return self.observers
+        }
+        for observer in observers { observer(progress) }
     }
 }
