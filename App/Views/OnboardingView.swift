@@ -1,5 +1,6 @@
 import AVFoundation
 import SwiftUI
+import TakiEngine
 
 struct OnboardingView: View {
     enum Step: Int, CaseIterable {
@@ -106,7 +107,7 @@ private struct DownloadPage: View {
         OnboardingPage(
             symbol: model.isModelReady ? "checkmark.circle.fill" : "arrow.down.circle",
             title: model.isModelReady ? "Ready to go offline" : "Download the speech model",
-            message: "\(model.modelChoice.displayName) · about \(model.modelChoice.approximateDownload). This happens once — use Wi-Fi. After that, Taki works with no internet."
+            message: "\(model.modelChoice.displayName) · \(model.modelChoice.approximateDownload). This happens once — use Wi-Fi. After that, Taki works with no internet."
         ) {
             switch model.modelStatus {
             case .notDownloaded:
@@ -117,6 +118,7 @@ private struct DownloadPage: View {
                 PrimaryButton("Continue") { onContinue() }
             case let .failed(message):
                 Text(message).font(.footnote).foregroundStyle(.red).multilineTextAlignment(.center)
+                if !model.setupLog.isEmpty { SetupLogView() }
                 PrimaryButton("Try again") { Task { await model.prepareModels(restart: true) } }
             }
         }
@@ -136,10 +138,18 @@ struct ModelSetupProgress: View {
                 ProgressView()
             }
             TimelineView(.periodic(from: model.modelStepStartedAt, by: 1)) { context in
-                Text(statusLine(now: context.date))
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                VStack(spacing: 10) {
+                    Text(statusLine(now: context.date))
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    if offerFallback(now: context.date) {
+                        Button("Use \(ASRModelChoice.parakeetTDTv2.displayName) instead") {
+                            Task { await model.switchModel(to: .parakeetTDTv2) }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
             }
             if model.modelStalled {
                 Text("This is taking longer than it should.")
@@ -148,8 +158,16 @@ struct ModelSetupProgress: View {
                 Button("Start over") { Task { await model.prepareModels(restart: true) } }
                     .buttonStyle(.bordered)
             }
+            SetupLogView()
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Parakeet Unified can sit building for an hour on iPhone; after a few minutes, offer the model that loads.
+    private func offerFallback(now: Date) -> Bool {
+        model.modelChoice == .parakeetUnified
+            && model.modelProgress?.stage == .loadingModel
+            && now.timeIntervalSince(model.modelStepStartedAt) > 180
     }
 
     private func statusLine(now: Date) -> String {
@@ -269,5 +287,33 @@ struct PrimaryButton: View {
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
+    }
+}
+
+/// The setup steps as raw, terminal-style output that scrolls as lines arrive.
+struct SetupLogView: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(model.setupLog.enumerated()), id: \.offset) { index, line in
+                        Text(line).id(index)
+                    }
+                }
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(Color(white: 0.82))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .textSelection(.enabled)
+            }
+            .frame(height: 150)
+            .background(Color(white: 0.09), in: .rect(cornerRadius: 12))
+            .onChange(of: model.setupLog.count, initial: true) {
+                proxy.scrollTo(model.setupLog.count - 1, anchor: .bottom)
+            }
+        }
+        .accessibilityLabel("Setup log")
     }
 }

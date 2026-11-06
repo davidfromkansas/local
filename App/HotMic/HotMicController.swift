@@ -15,7 +15,7 @@ final class HotMicController {
     private(set) var lastError: String?
     private(set) var lastText: String?
 
-    @ObservationIgnored var modelChoice: () -> ASRModelChoice = { .parakeetUnified }
+    @ObservationIgnored var modelChoice: () -> ASRModelChoice = { .parakeetTDTv2 }
     @ObservationIgnored var dictionaryProvider: () -> [DictionaryEntry] = { [] }
     @ObservationIgnored var onFinished: (DictationOutput) -> Void = { _ in }
 

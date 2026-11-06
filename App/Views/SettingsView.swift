@@ -3,7 +3,7 @@ import TakiEngine
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
-    @AppStorage(SettingsKey.model) private var modelChoice = ASRModelChoice.parakeetUnified.rawValue
+    @AppStorage(SettingsKey.model) private var modelChoice = ASRModelChoice.parakeetTDTv2.rawValue
     @AppStorage(SettingsKey.timeout) private var timeout = 0.0
     @AppStorage(SettingsKey.cleanup) private var cleanup = true
     @AppStorage(SettingsKey.debugFeed) private var debugFeed = false
@@ -29,7 +29,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Recognition")
                 } footer: {
-                    Text("Everything runs on this iPhone. Parakeet Unified is the most accurate; TDT v2 is the fallback.")
+                    Text("Everything runs on this iPhone. TDT v2 is the recommended model. Parakeet Unified is experimental and may not finish loading on iPhone.")
                 }
 
                 Section {

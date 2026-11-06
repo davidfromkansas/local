@@ -37,7 +37,7 @@ Darwin notifications carry **no payload**, only names `com.davidfromkansas.taki.
 - `debug-feed.wav` — optional DEBUG audio override (see below)
 
 ## ASR + cleanup
-- Default model: Parakeet Unified 0.6B English batch (`UnifiedAsrManager`, `FluidInference/parakeet-unified-en-0.6b-coreml`) with **`encoderPrecision: .fp16`** — the int8 encoder fails to load on A16 (FluidAudio #828). Fallback in Settings: Parakeet TDT v2 (`AsrManager`). FluidAudio is pinned to `0.18.2`; read its `Documentation/` before changing APIs.
+- Default model: Parakeet TDT v2 (`AsrManager`, `FluidInference/parakeet-tdt-0.6b-v2-coreml`): it builds for the iPhone's Neural Engine in seconds. Parakeet Unified 0.6B (`UnifiedAsrManager`, `encoderPrecision: .fp16`; int8 fails on A16, FluidAudio #828) is experimental in Settings: on an iPhone 17 Pro its first Core ML/ANE load never finished (60+ min), so setup offers switching to TDT v2 after 3 min. FluidAudio is pinned to `0.18.2`; read its `Documentation/` before changing APIs.
 - Silero VAD trims silence. Compute units `.cpuAndNeuralEngine` — **no GPU** (not allowed in background).
 - Models download once to Application Support/Taki/Models (onboarding), then are compiled and kept loaded.
 - Cleanup = `TextCleaner` rules (fillers, stutters, "actually I mean" self-corrections, dictionary, punctuation) → optional Apple Foundation Models light edit (`LLMCleaner`), rejected if length ratio is outside 0.6–1.2 → dictionary re-applied.
