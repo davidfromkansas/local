@@ -102,6 +102,9 @@ final class KeyTouchView: UIView {
         backgroundColor = .clear
         isAccessibilityElement = false
         accessibilityElementsHidden = true
+        // iOS doesn't deliver touches to a keyboard extension where it draws nothing (the gaps between
+        // keys are clear), so cover the surface with a practically invisible fill.
+        backgroundColor = UIColor(white: 0.5, alpha: 0.01)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
