@@ -54,24 +54,70 @@ public final class SpectrumAnalyzer {
     }
 }
 
-/// A real iPhone mic in `.measurement` mode (no system gain) puts normal speech around -45 dBFS, which the
-/// visual level/spectrum scales read as near-silence. Tracks the recent peak and lifts it to `target`.
-public struct AutoGain {
-    public static let target: Float = -20
-    public static let maxGain: Float = 24
+/// Mic loudness → 0…1 for the visuals, measured against the room: the recent noise floor is 0 and the loudest
+/// recent sound is 1. A raw iPhone mic (`.measurement` mode) puts quiet speech near -46 dBFS and whispers near
+/// -60, which any fixed dB scale reads as silence.
+public struct VoiceMeter {
+    /// How fast the noise floor creeps up while it's louder than the floor, in dB per second.
+    public static let noiseRise: Float = 3
     /// How fast the remembered peak falls, in dB per second.
-    public static let release: Float = 6
-    private static let floor: Float = -80
-    private var peak = AutoGain.floor
+    public static let peakRelease: Float = 6
+    /// Sound this many dB over the floor still counts as silence (noise jitter).
+    public static let gate: Float = 4
+    /// Smallest dB range mapped to 0…1, so a whisper doesn't have to be loud to fill it.
+    public static let minSpan: Float = 12
+    /// The floor never sits below this, so a silent first buffer can't make room noise look loud.
+    public static let lowestFloor: Float = -75
+    public static let maxSpectrumGain: Float = 36
+
+    private var floor: Float?
+    private var peak = VoiceMeter.lowestFloor
 
     public init() {}
 
-    public mutating func reset() { peak = Self.floor }
+    public mutating func reset() {
+        floor = nil
+        peak = Self.lowestFloor
+    }
 
-    /// Feeds one buffer's RMS, `seconds` long. Returns the gain in dB to apply to it.
-    public mutating func update(rms: Float, seconds: Float) -> Float {
-        let db = rms > 0 ? 20 * log10(rms) : Self.floor
-        peak = max(db, max(Self.floor, peak - Self.release * seconds))
-        return min(Self.maxGain, max(0, Self.target - peak))
+    /// Feeds one buffer's RMS, `seconds` long. Returns its 0…1 level and the dB gain to apply to its spectrum.
+    public mutating func update(rms: Float, seconds: Float) -> (level: Float, gainDB: Float) {
+        guard rms > 0 else { return (0, 0) }
+        let db = 20 * log10(rms)
+        let noise = max(Self.lowestFloor, min(db, (floor ?? db) + Self.noiseRise * seconds))
+        floor = noise
+        peak = max(db, peak - Self.peakRelease * seconds)
+        let span = max(Self.minSpan, peak - noise - Self.gate)
+        let level = min(1, max(0, (db - noise - Self.gate) / span))
+        let gain = min(Self.maxSpectrumGain, max(0, -20 - peak))
+        return (level, gain)
+    }
+}
+
+/// Turns quiet recordings up before the speech detector and the speech model see them.
+public enum SpeechLoudness {
+    /// Speech is lifted to about this RMS level (normal talking volume).
+    public static let targetDB: Float = -20
+    public static let maxGainDB: Float = 30
+    private static let window = 1_600  // 100 ms at 16 kHz
+
+    /// RMS of the loudest-but-one-in-ten 100 ms window: the level of the speech itself, not the pauses.
+    public static func speechRMS(_ samples: [Float]) -> Float {
+        guard !samples.isEmpty else { return 0 }
+        var levels: [Float] = stride(from: 0, to: samples.count, by: window).map { start in
+            let chunk = samples[start..<min(samples.count, start + window)]
+            return (chunk.reduce(Float(0)) { $0 + $1 * $1 } / Float(chunk.count)).squareRoot()
+        }
+        levels.sort()
+        return levels[min(levels.count - 1, Int(Float(levels.count) * 0.9))]
+    }
+
+    public static func boost(_ samples: [Float]) -> [Float] {
+        let rms = speechRMS(samples)
+        guard rms > 0 else { return samples }
+        let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
+        let wanted = pow(10, min(maxGainDB, max(0, targetDB - 20 * log10(rms))) / 20)
+        let gain = min(wanted, 0.98 / max(peak, 1e-9))
+        return gain > 1.01 ? samples.map { $0 * gain } : samples
     }
 }

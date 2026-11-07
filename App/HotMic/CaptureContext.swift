@@ -16,8 +16,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
     private var lastLevelWrite: CFAbsoluteTime = 0
     private var currentLevel: Float = 0
     private let analyzer = SpectrumAnalyzer()
-    private var gain = AutoGain()
-    private var gainDB: Float = 0
+    private var meter = VoiceMeter()
     #if DEBUG
     private let logger = Logger(subsystem: "com.davidfromkansas.taki", category: "audio")
     private var lastDebugLog: CFAbsoluteTime = 0
@@ -42,8 +41,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
             samples.removeAll(keepingCapacity: true)
             samples.reserveCapacity(16_000 * 30)
             analyzer.reset()
-            gain.reset()
-            gainDB = 0
+            meter.reset()
             isCapturing = true
         }
     }
@@ -83,10 +81,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
     private func handle(_ buffer: AVAudioPCMBuffer) {
         guard lock.withLock({ isCapturing }), let converted = convert(buffer) else { return }
         let rms = AudioLevel.rms(converted)
-        let (level, boost) = lock.withLock {
-            gainDB = gain.update(rms: rms, seconds: Float(converted.count) / 16_000)
-            return (AudioLevel.normalized(rms: rms, gainDB: gainDB), gainDB)
-        }
+        let (level, boost) = lock.withLock { meter.update(rms: rms, seconds: Float(converted.count) / 16_000) }
         lock.withLock {
             guard isCapturing else { return }
             samples.append(contentsOf: converted)
@@ -97,7 +92,8 @@ nonisolated final class CaptureContext: @unchecked Sendable {
         if now - lastLevelWrite > 1.0 / 30 {
             lastLevelWrite = now
             store.writeLevel(level)
-            store.writeSpectrum(lock.withLock { analyzer.bands(gainDB: boost) })
+            let quiet = min(1, level * 2)  // room noise lifted by the gain mustn't ripple the orb
+            store.writeSpectrum(lock.withLock { analyzer.bands(gainDB: boost) }.map { $0 * quiet })
         }
         #if DEBUG
         if now - lastDebugLog > 0.5 {

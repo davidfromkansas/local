@@ -147,6 +147,7 @@ public actor TranscriptionEngine {
         progress.send(PrepareProgress(stage: .loadingVAD, fraction: 1))
         var vadConfig = VadConfig.default
         vadConfig.computeUnits = .cpuAndNeuralEngine
+        vadConfig.defaultThreshold = Self.vadThreshold
         let vad = try await VadManager(config: vadConfig, modelDirectory: baseDirectory)
         try current()
         self.vad = vad
@@ -164,9 +165,15 @@ public actor TranscriptionEngine {
         loadedChoice = nil
     }
 
-    /// 16 kHz mono Float32 in, raw ASR text out. Leading/trailing silence is trimmed with Silero VAD.
+    /// Silero's usual 0.5 instead of FluidAudio's 0.85, which drops whispers.
+    static let vadThreshold: Float = 0.5
+    /// When the VAD hears no speech, still transcribe if the speech-level RMS is above this (-55 dB).
+    static let keepWithoutSpeechRMS: Float = 0.0018
+
+    /// 16 kHz mono Float32 in, raw ASR text out. Quiet audio is turned up, then leading/trailing silence is
+    /// trimmed with Silero VAD.
     public func transcribe(_ samples: [Float]) async throws -> String {
-        let trimmed = try await trimSilence(samples)
+        let trimmed = try await trimSilence(SpeechLoudness.boost(samples))
         guard trimmed.count >= 4_000 else { return "" }  // < 0.25 s of speech
         return try await transcribeRaw(trimmed)
     }
@@ -189,12 +196,12 @@ public actor TranscriptionEngine {
     private func trimSilence(_ samples: [Float]) async throws -> [Float] {
         guard let vad, samples.count > 16_000 else { return samples }
         var config = VadSegmentationConfig.default
-        config.speechPadding = 0.25
-        config.minSpeechDuration = 0.15
+        config.speechPadding = 0.35
+        config.minSpeechDuration = 0.1
         let segments = try await vad.segmentSpeech(samples, config: config)
         guard let first = segments.first, let last = segments.last else {
             // VAD heard nothing: keep the audio only if it isn't near-silent.
-            return AudioLevel.rms(samples) > 0.01 ? samples : []
+            return SpeechLoudness.speechRMS(samples) > Self.keepWithoutSpeechRMS ? samples : []
         }
         let start = max(0, first.startSample(sampleRate: 16_000))
         let end = min(samples.count, last.endSample(sampleRate: 16_000))
