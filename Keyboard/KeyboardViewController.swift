@@ -133,6 +133,12 @@ enum MemoryLog {
         timer = nil
     }
 
+    /// What the orb is fed while dictating: `level` above 0.3 counts as speaking.
+    static func voice(level: Float, spectrum: [Float]) {
+        let peak = spectrum.max() ?? 0, mean = spectrum.isEmpty ? 0 : spectrum.reduce(0, +) / Float(spectrum.count)
+        logger.notice("TAKIVOICE level \(level, format: .fixed(precision: 2), privacy: .public) bands max \(peak, format: .fixed(precision: 2), privacy: .public) mean \(mean, format: .fixed(precision: 2), privacy: .public) count \(spectrum.count, privacy: .public)")
+    }
+
     private static func sample() {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)

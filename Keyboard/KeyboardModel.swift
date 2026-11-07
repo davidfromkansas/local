@@ -74,6 +74,9 @@ final class KeyboardModel {
                     level = store?.readLevel() ?? 0
                     spectrum = store?.readSpectrum() ?? []
                     pushLevel(level)
+                    #if DEBUG
+                    if tick % 15 == 0 { MemoryLog.voice(level: level, spectrum: spectrum) }
+                    #endif
                 } else if level != 0 || !spectrum.isEmpty {
                     level = 0
                     spectrum = []
