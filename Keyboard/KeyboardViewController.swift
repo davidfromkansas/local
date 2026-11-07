@@ -139,6 +139,10 @@ enum MemoryLog {
         logger.notice("TAKIVOICE level \(level, format: .fixed(precision: 2), privacy: .public) bands max \(peak, format: .fixed(precision: 2), privacy: .public) mean \(mean, format: .fixed(precision: 2), privacy: .public) count \(spectrum.count, privacy: .public)")
     }
 
+    static func state(_ change: String) {
+        logger.notice("TAKISTATE \(change, privacy: .public)")
+    }
+
     private static func sample() {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)

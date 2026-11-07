@@ -131,6 +131,9 @@ final class KeyboardModel {
 
     private func setOptimistic(_ next: KeyboardUIState) {
         optimistic = (next, .now.addingTimeInterval(1.5))
+        #if DEBUG
+        MemoryLog.state("\(state) → \(next) (tap)")
+        #endif
         state = next
     }
 
@@ -144,7 +147,12 @@ final class KeyboardModel {
                 return
             }
         }
-        if state != actual { state = actual }
+        if state != actual {
+            #if DEBUG
+            MemoryLog.state("\(state) → \(actual)")
+            #endif
+            state = actual
+        }
         if let error = snapshot?.errorMessage, !error.isEmpty, actual == .ready {
             show("Something went wrong — try again")
         }

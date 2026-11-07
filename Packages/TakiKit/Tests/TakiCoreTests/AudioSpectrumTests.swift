@@ -33,6 +33,29 @@ import Testing
         #expect(low[lowPeak] > 0.5)
     }
 
+    @Test func gainLiftsQuietBands() {
+        let analyzer = SpectrumAnalyzer()
+        analyzer.append(sine(300, amplitude: 0.003))
+        let plain = analyzer.bands().max()!
+        let boosted = analyzer.bands(gainDB: 20).max()!
+        #expect(boosted > plain + 0.3)
+    }
+
+    @Test func autoGainLiftsQuietSpeechButNotLoud() {
+        var quiet = AutoGain()
+        #expect(quiet.update(rms: 0.005, seconds: 0.064) > 15)  // -46 dB
+        var loud = AutoGain()
+        #expect(loud.update(rms: 0.3, seconds: 0.064) == 0)     // -10 dB
+    }
+
+    @Test func autoGainIsCappedInSilence() {
+        var gain = AutoGain()
+        _ = gain.update(rms: 0.01, seconds: 0.1)
+        var last: Float = 0
+        for _ in 0..<100 { last = gain.update(rms: 0.0001, seconds: 0.1) }
+        #expect(last == AutoGain.maxGain)
+    }
+
     @Test func storeRoundTrip() {
         let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         let store = SharedStore(directory: dir)

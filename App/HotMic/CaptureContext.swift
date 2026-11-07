@@ -1,4 +1,7 @@
 import AVFoundation
+#if DEBUG
+import os
+#endif
 import TakiCore
 import TakiEngine
 
@@ -13,6 +16,12 @@ nonisolated final class CaptureContext: @unchecked Sendable {
     private var lastLevelWrite: CFAbsoluteTime = 0
     private var currentLevel: Float = 0
     private let analyzer = SpectrumAnalyzer()
+    private var gain = AutoGain()
+    private var gainDB: Float = 0
+    #if DEBUG
+    private let logger = Logger(subsystem: "com.davidfromkansas.taki", category: "audio")
+    private var lastDebugLog: CFAbsoluteTime = 0
+    #endif
     private let target = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
 
     init(store: SharedStore) {
@@ -33,6 +42,8 @@ nonisolated final class CaptureContext: @unchecked Sendable {
             samples.removeAll(keepingCapacity: true)
             samples.reserveCapacity(16_000 * 30)
             analyzer.reset()
+            gain.reset()
+            gainDB = 0
             isCapturing = true
         }
     }
@@ -71,7 +82,11 @@ nonisolated final class CaptureContext: @unchecked Sendable {
 
     private func handle(_ buffer: AVAudioPCMBuffer) {
         guard lock.withLock({ isCapturing }), let converted = convert(buffer) else { return }
-        let level = AudioLevel.normalized(rms: AudioLevel.rms(converted))
+        let rms = AudioLevel.rms(converted)
+        let (level, boost) = lock.withLock {
+            gainDB = gain.update(rms: rms, seconds: Float(converted.count) / 16_000)
+            return (AudioLevel.normalized(rms: rms, gainDB: gainDB), gainDB)
+        }
         lock.withLock {
             guard isCapturing else { return }
             samples.append(contentsOf: converted)
@@ -82,8 +97,15 @@ nonisolated final class CaptureContext: @unchecked Sendable {
         if now - lastLevelWrite > 1.0 / 30 {
             lastLevelWrite = now
             store.writeLevel(level)
-            store.writeSpectrum(lock.withLock { analyzer.bands() })
+            store.writeSpectrum(lock.withLock { analyzer.bands(gainDB: boost) })
         }
+        #if DEBUG
+        if now - lastDebugLog > 0.5 {
+            lastDebugLog = now
+            let db = rms > 0 ? 20 * log10(rms) : -160
+            logger.notice("TAKIAUDIO rms \(db, format: .fixed(precision: 1), privacy: .public) dB gain \(boost, format: .fixed(precision: 1), privacy: .public) dB level \(level, format: .fixed(precision: 2), privacy: .public)")
+        }
+        #endif
     }
 
     private func convert(_ buffer: AVAudioPCMBuffer) -> [Float]? {

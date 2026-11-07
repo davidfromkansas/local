@@ -209,10 +209,10 @@ public enum AudioLevel {
         return (sum / Float(samples.count)).squareRoot()
     }
 
-    /// RMS → 0…1 on a -50 dB…0 dB scale.
-    public static func normalized(rms: Float) -> Float {
+    /// RMS (plus `gainDB`) → 0…1 on a -50 dB…0 dB scale.
+    public static func normalized(rms: Float, gainDB: Float = 0) -> Float {
         guard rms > 0 else { return 0 }
-        let db = 20 * log10(rms)
+        let db = 20 * log10(rms) + gainDB
         return min(1, max(0, 1 - abs(db / 50)))
     }
 }
