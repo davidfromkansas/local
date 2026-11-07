@@ -1,8 +1,8 @@
 #include <metal_stdlib>
 using namespace metal;
 
-// Taki's voice orb: a ~1M-vertex sphere generated entirely on the GPU (no vertex buffers, so it costs the
-// memory-limited keyboard almost nothing). Each vertex is pushed along its normal by layered noise ("liquid")
+// Taki's voice orb: a ~150k-vertex sphere generated entirely on the GPU (no vertex buffers). Keep the grid
+// small: the GPU still stores each frame's transformed vertices, and that counts against the keyboard's memory limit. Each vertex is pushed along its normal by layered noise ("liquid")
 // whose strength comes from the voice spectrum (low / mid / high energy each drive one lobe field).
 
 struct OrbUniforms {

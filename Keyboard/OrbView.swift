@@ -41,9 +41,10 @@ struct OrbView: UIViewRepresentable {
 /// (fast attack, slow release) so it rises with speech and melts back down in pauses.
 final class OrbRenderer: NSObject, MTKViewDelegate {
     static let device = MTLCreateSystemDefaultDevice()
-    /// 1024 × 1000 grid ≈ 1M vertices.
-    private let cols: UInt32 = 1024
-    private let rows: UInt32 = 1000
+    /// 384 × 192 grid ≈ 150k vertices. The GPU keeps every transformed vertex of a frame in memory that counts
+    /// against the keyboard's 177 MB limit: the old 1024 × 1000 grid (2M vertices) got the keyboard killed on iPhone.
+    private let cols: UInt32 = 384
+    private let rows: UInt32 = 192
 
     private weak var model: KeyboardModel?
     private let queue: MTLCommandQueue

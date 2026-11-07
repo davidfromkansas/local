@@ -1,5 +1,8 @@
 import SwiftUI
 import UIKit
+#if DEBUG
+import os
+#endif
 
 final class KeyboardViewController: UIInputViewController {
     private let model = KeyboardModel()
@@ -76,6 +79,9 @@ final class KeyboardViewController: UIInputViewController {
         KeyFeedback.shared.hapticsEnabled = hasFullAccess
         model.returnKeyType = textDocumentProxy.returnKeyType ?? .default
         model.start()
+        #if DEBUG
+        MemoryLog.start()
+        #endif
     }
 
     /// iOS's edge-swipe recognizers on the keyboard window hold back touches near the screen edges
@@ -103,5 +109,40 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         model.stop()
+        #if DEBUG
+        MemoryLog.stop()
+        #endif
     }
 }
+
+#if DEBUG
+/// Logs the keyboard's memory footprint once a second (`log stream` / Console: subsystem `com.davidfromkansas.taki.keyboard`).
+/// iOS kills a keyboard that goes over its limit (177 MB on iPhone 17 Pro, iOS 26).
+enum MemoryLog {
+    private static let logger = Logger(subsystem: "com.davidfromkansas.taki.keyboard", category: "memory")
+    nonisolated(unsafe) private static var timer: Timer?
+
+    static func start() {
+        timer?.invalidate()
+        sample()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in MainActor.assumeIsolated { sample() } }
+    }
+
+    static func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private static func sample() {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        guard result == KERN_SUCCESS else { return }
+        let used = info.phys_footprint / 1_048_576
+        let left = os_proc_available_memory() / 1_048_576
+        logger.notice("TAKIMEM footprint \(used, privacy: .public) MB, \(left, privacy: .public) MB left")
+    }
+}
+#endif
