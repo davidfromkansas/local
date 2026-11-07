@@ -17,6 +17,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
     private var currentLevel: Float = 0
     private let analyzer = SpectrumAnalyzer()
     private var meter = VoiceMeter()
+    private var highPass = HighPass()
     #if DEBUG
     private let logger = Logger(subsystem: "com.davidfromkansas.taki", category: "audio")
     private var lastDebugLog: CFAbsoluteTime = 0
@@ -42,6 +43,7 @@ nonisolated final class CaptureContext: @unchecked Sendable {
             samples.reserveCapacity(16_000 * 30)
             analyzer.reset()
             meter.reset()
+            highPass.reset()
             isCapturing = true
         }
     }
@@ -81,7 +83,11 @@ nonisolated final class CaptureContext: @unchecked Sendable {
     private func handle(_ buffer: AVAudioPCMBuffer) {
         guard lock.withLock({ isCapturing }), let converted = convert(buffer) else { return }
         let rms = AudioLevel.rms(converted)
-        let (level, boost) = lock.withLock { meter.update(rms: rms, seconds: Float(converted.count) / 16_000) }
+        let (level, boost, voiceRMS) = lock.withLock {
+            let voiceRMS = AudioLevel.rms(highPass.process(converted))
+            let (level, boost) = meter.update(rms: voiceRMS, seconds: Float(converted.count) / 16_000)
+            return (level, boost, voiceRMS)
+        }
         lock.withLock {
             guard isCapturing else { return }
             samples.append(contentsOf: converted)
@@ -99,7 +105,8 @@ nonisolated final class CaptureContext: @unchecked Sendable {
         if now - lastDebugLog > 0.5 {
             lastDebugLog = now
             let db = rms > 0 ? 20 * log10(rms) : -160
-            logger.notice("TAKIAUDIO rms \(db, format: .fixed(precision: 1), privacy: .public) dB gain \(boost, format: .fixed(precision: 1), privacy: .public) dB level \(level, format: .fixed(precision: 2), privacy: .public)")
+            let voiceDB = voiceRMS > 0 ? 20 * log10(voiceRMS) : -160
+            logger.notice("TAKIAUDIO rms \(db, format: .fixed(precision: 1), privacy: .public) dB above300Hz \(voiceDB, format: .fixed(precision: 1), privacy: .public) dB gain \(boost, format: .fixed(precision: 1), privacy: .public) dB level \(level, format: .fixed(precision: 2), privacy: .public)")
         }
         #endif
     }

@@ -119,9 +119,9 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
             let goal = i < target.count ? target[i] : 0
             bands[i] += (goal - bands[i]) * ease(goal > bands[i] ? 0.55 : 0.12)
         }
-        let loud = model?.level ?? 0
+        let loud = pow(model?.level ?? 0, 0.6)  // lift soft sounds (whispers) more than loud ones
         level += (loud - level) * ease(loud > level ? 0.5 : 0.1)
-        let voiced: Float = loud > 0.3 ? 1 : 0
+        let voiced: Float = loud > Self.talkingThreshold ? 1 : 0
         speaking += (voiced - speaking) * ease(voiced > speaking ? 0.35 : 0.04)
         let settling: Float = model?.state == .processing ? 1 : 0
         calm += (settling - calm) * ease(0.08)
@@ -138,6 +138,8 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     /// The pose drawn last, so the morph overlay can trace the live orb's exact outline.
     nonisolated(unsafe) static var latest: (uniforms: OrbUniforms, voice: SIMD3<Float>)?
 
+    /// Level (after the 0.6 curve) above which the orb switches to its talking motion.
+    static let talkingThreshold: Float = 0.3
     private static let eyeDistance: Float = 4.3
     private static let fovY: Float = 0.62
     static func orbScale(calm: Float) -> Float { 1.12 - 0.14 * calm }

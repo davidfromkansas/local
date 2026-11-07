@@ -51,11 +51,26 @@ import Testing
     }
 
     @Test func roomNoiseStaysStill() {
-        #expect(levels(voice: -69).allSatisfy { $0 == 0 })
+        #expect(levels(voice: -70).allSatisfy { $0 == 0 })
     }
 
     @Test func whisperMovesTheOrb() {
-        #expect(levels(voice: -60).first! > 0.4)
+        #expect(levels(voice: -60).first! > 0.9)
+        #expect(levels(voice: -66).first! > 0.2)  // barely over the room noise
+    }
+
+    @Test func steadyWhisperKeepsMovingTheOrb() {
+        #expect(levels(voice: -64, seconds: 4).last! > 0.1)
+    }
+
+    @Test func highPassRemovesRumble() {
+        var filter = HighPass()
+        let rumble = filter.process(sine(60, amplitude: 0.1, count: 8_000))
+        filter.reset()
+        let hiss = filter.process(sine(3_000, amplitude: 0.1, count: 8_000))
+        let rms = { (x: [Float]) in (x.suffix(4_000).reduce(0) { $0 + $1 * $1 } / 4_000).squareRoot() }
+        #expect(rms(rumble) < 0.005)
+        #expect(rms(hiss) > 0.06)
     }
 
     @Test func quietSpeechFillsTheRange() {

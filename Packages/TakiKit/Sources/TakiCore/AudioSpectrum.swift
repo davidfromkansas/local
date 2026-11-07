@@ -59,13 +59,13 @@ public final class SpectrumAnalyzer {
 /// -60, which any fixed dB scale reads as silence.
 public struct VoiceMeter {
     /// How fast the noise floor creeps up while it's louder than the floor, in dB per second.
-    public static let noiseRise: Float = 3
+    public static let noiseRise: Float = 1
     /// How fast the remembered peak falls, in dB per second.
     public static let peakRelease: Float = 6
     /// Sound this many dB over the floor still counts as silence (noise jitter).
-    public static let gate: Float = 4
+    public static let gate: Float = 2
     /// Smallest dB range mapped to 0…1, so a whisper doesn't have to be loud to fill it.
-    public static let minSpan: Float = 12
+    public static let minSpan: Float = 8
     /// The floor never sits below this, so a silent first buffer can't make room noise look loud.
     public static let lowestFloor: Float = -75
     public static let maxSpectrumGain: Float = 36
@@ -119,5 +119,33 @@ public enum SpeechLoudness {
         let wanted = pow(10, min(maxGainDB, max(0, targetDB - 20 * log10(rms))) / 20)
         let gain = min(wanted, 0.98 / max(peak, 1e-9))
         return gain > 1.01 ? samples.map { $0 * gain } : samples
+    }
+}
+
+/// 2nd-order Butterworth high-pass (RBJ biquad). The meter listens above ~300 Hz: room rumble lives below it,
+/// while a whisper has almost no energy there.
+public struct HighPass {
+    private let b0, b1, b2, a1, a2: Float
+    private var x1: Float = 0, x2: Float = 0, y1: Float = 0, y2: Float = 0
+
+    public init(cutoff: Float = 300, sampleRate: Float = 16_000) {
+        let w = 2 * Float.pi * cutoff / sampleRate
+        let alpha = sin(w) / (2 * 0.7071)
+        let a0 = 1 + alpha
+        b0 = (1 + cos(w)) / 2 / a0
+        b1 = -(1 + cos(w)) / a0
+        b2 = b0
+        a1 = -2 * cos(w) / a0
+        a2 = (1 - alpha) / a0
+    }
+
+    public mutating func reset() { x1 = 0; x2 = 0; y1 = 0; y2 = 0 }
+
+    public mutating func process(_ samples: [Float]) -> [Float] {
+        samples.map { x in
+            let y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = x; y2 = y1; y1 = y
+            return y
+        }
     }
 }
