@@ -77,9 +77,12 @@ static float orbDisplacement(float3 n, float t, float speaking, float level, flo
     float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
     float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
     float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
-    float idle = 0.075 * wide + 0.035 * mid;
-    float speech = speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight) + 0.04 * level;
-    return (idle + speech * motion) * (1.0 - 0.6 * calm);
+    // Calm ripples stay small so talking (up to ~4x taller) clearly stands out; the sphere also shrinks a
+    // little while talking (`orbScale`) to leave room for the peaks, and a soft cap keeps them in frame.
+    float idle = 0.04 * wide + 0.02 * mid;
+    float speech = speaking * (0.24 * voice.x * wide + 0.18 * voice.y * mid + 0.15 * voice.z * tight + 0.07 * level);
+    float d = (idle + speech * motion) * (1.0 - 0.6 * calm);
+    return 0.28 * tanh(d / 0.28);
 }
 
 vertex VOut orb_vertex(uint vid [[vertex_id]],

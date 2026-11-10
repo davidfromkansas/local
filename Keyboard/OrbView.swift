@@ -142,7 +142,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     static let talkingThreshold: Float = 0.3
     private static let eyeDistance: Float = 4.3
     private static let fovY: Float = 0.62
-    static func orbScale(calm: Float) -> Float { 1.12 - 0.14 * calm }
+    static func orbScale(calm: Float, speaking: Float = 0) -> Float { 1.12 - 0.14 * calm - 0.1 * speaking }
 
     /// On-screen radius (points) of the resting orb in a view `height` points tall.
     static func silhouetteRadius(height: Float, calm: Float) -> Float {
@@ -154,7 +154,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let projection = Self.perspective(fovY: Self.fovY, aspect: aspect, near: 0.1, far: 20)
         let viewMatrix = Self.translation(-eye)
         let spin = reduceMotion ? 0 : time * 0.12
-        let model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(Self.orbScale(calm: calm))
+        let model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(Self.orbScale(calm: calm, speaking: speaking))
         return OrbUniforms(viewProjection: projection * viewMatrix, model: model, time: time, level: level,
                            speaking: speaking, calm: calm, cols: cols, rows: rows,
                            motion: reduceMotion ? 0.5 : 1, dark: dark ? 1 : 0)
