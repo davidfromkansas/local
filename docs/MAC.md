@@ -61,7 +61,7 @@ Measured on our cloud Mac, which has a slow virtual GPU, so your M5 Pro will be 
 
 - Speech to text: **0.64 s** on average per clip after you let go.
 - AI cleanup: **1.0 s** on average.
-- Full wait from letting go of the key to text appearing in the app: see *Measured release-to-text wait* in the pull request. The History tab shows this number for every dictation on your Mac.
+- **Full wait from letting go of the key to the text being pasted: 1.33 s** on average (1.40 s and 1.26 s, two dictations into TextEdit, cleanup on). The History tab shows this number for every dictation on your Mac.
 
 If it feels slow, turn off "Clean up with a local AI model" (rules-only cleanup is instant).
 
