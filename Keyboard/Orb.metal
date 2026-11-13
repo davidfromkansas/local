@@ -18,6 +18,29 @@ struct OrbUniforms {
     float dark;      // 1 in dark mode: adds a faint violet rim so the edge reads on a dark keyboard
 };
 
+// Look/feel knobs (the Mac Orb Tuner); must match `OrbShaderTuning` in OrbTuning.swift.
+struct OrbTune {
+    float idle;        // resting wobble ×
+    float reaction;    // voice bulge ×
+    float low;         // deep sounds → widest lobes
+    float mid;
+    float high;        // crisp sounds → smaller lobes
+    float puff;        // loudness swells the whole orb
+    float lumps;       // lobe frequency ×: higher = more, smaller lumps
+    float hue;         // radians
+    float brightness;
+    float shine;
+    float glow;        // rim ×
+    float voiceLight;  // peaks light up with the voice ×
+};
+
+static OrbTune orbStandardTune() {
+    OrbTune k;
+    k.idle = 1.0; k.reaction = 1.0; k.low = 0.13; k.mid = 0.09; k.high = 0.06; k.puff = 0.04; k.lumps = 1.0;
+    k.hue = 0.0; k.brightness = 1.0; k.shine = 1.0; k.glow = 1.0; k.voiceLight = 1.0;
+    return k;
+}
+
 struct VOut {
     float4 position [[position]];
     float3 world;
@@ -73,19 +96,21 @@ static float snoise(float3 v) {
 
 // Only big, slow lobes (David's reference: 4–6 broad bumps, never wrinkles). Each voice range drives
 // its own lobe field: lows swell the widest lobes, mids and highs the slightly smaller ones.
-static float orbDisplacement(float3 n, float t, float speaking, float level, float3 voice, float motion, float calm) {
-    float wide = snoise(n * 0.95 + float3(0.0, t * 0.30, t * 0.18));
-    float mid = snoise(n * 1.3 + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
-    float tight = snoise(n * 1.7 + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
-    float idle = 0.075 * wide + 0.035 * mid;
-    float speech = speaking * (0.13 * voice.x * wide + 0.09 * voice.y * mid + 0.06 * voice.z * tight) + 0.04 * level;
-    return (idle + speech * motion) * (1.0 - 0.6 * calm);
+static float orbDisplacement(float3 n, float t, float speaking, float level, float3 voice, float motion, float calm,
+                             OrbTune k) {
+    float wide = snoise(n * 0.95 * k.lumps + float3(0.0, t * 0.30, t * 0.18));
+    float mid = snoise(n * 1.3 * k.lumps + float3(t * 0.40, -t * 0.25, t * 0.22) + 7.3);
+    float tight = snoise(n * 1.7 * k.lumps + float3(-t * 0.50, t * 0.35, -t * 0.30) + 13.1);
+    float idle = (0.075 * wide + 0.035 * mid) * k.idle;
+    float speech = speaking * (k.low * voice.x * wide + k.mid * voice.y * mid + k.high * voice.z * tight) + k.puff * level;
+    return (idle + speech * k.reaction * motion) * (1.0 - 0.6 * calm);
 }
 
 vertex VOut orb_vertex(uint vid [[vertex_id]],
                        uint iid [[instance_id]],
                        constant OrbUniforms &u [[buffer(0)]],
-                       constant float3 &voice [[buffer(1)]]) {
+                       constant float3 &voice [[buffer(1)]],
+                       constant OrbTune &k [[buffer(2)]]) {
     // One triangle strip per latitude row; instance = row.
     uint col = vid >> 1;
     uint row = iid + (vid & 1);
@@ -93,7 +118,7 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
     float lat = float(row) / float(u.rows) * M_PI_F;
     float3 n = float3(sin(lat) * cos(lon), cos(lat), sin(lat) * sin(lon));
 
-    float d = orbDisplacement(n, u.time, u.speaking, u.level, voice, u.motion, u.calm);
+    float d = orbDisplacement(n, u.time, u.speaking, u.level, voice, u.motion, u.calm, k);
     float e = u.speaking * (voice.x + voice.y + voice.z) / 3.0;
 
     float4 world = u.model * float4(n * (1.0 + d), 1.0);
@@ -106,7 +131,14 @@ vertex VOut orb_vertex(uint vid [[vertex_id]],
 }
 
 // Glossy deep-purple blob (David's reference): dark valleys, lighter violet on the peaks, soft wet highlights.
-fragment float4 orb_fragment(VOut in [[stage_in]], constant OrbUniforms &u [[buffer(0)]]) {
+// Rotates a colour around the grey axis (hue shift that keeps brightness).
+static float3 hueShift(float3 c, float a) {
+    const float3 g = float3(0.57735);
+    return c * cos(a) + cross(g, c) * sin(a) + g * dot(g, c) * (1.0 - cos(a));
+}
+
+fragment float4 orb_fragment(VOut in [[stage_in]], constant OrbUniforms &u [[buffer(0)]],
+                             constant OrbTune &k [[buffer(1)]]) {
     float3 eye = float3(0.0, 0.0, 4.3);
     float3 v = normalize(eye - in.world);
     float3 nrm = normalize(cross(dfdx(in.world), dfdy(in.world)));
@@ -124,15 +156,16 @@ fragment float4 orb_fragment(VOut in [[stage_in]], constant OrbUniforms &u [[buf
     const float3 peak = float3(0.42, 0.06, 0.68);     // #6b0fad
     float3 color = mix(shadow, base, ndl);
     float rise = saturate(in.displacement * 5.0 + 0.35);
-    color = mix(color, peak, rise * ndl * (0.45 + 0.35 * in.energy));
+    color = mix(color, peak, rise * ndl * (0.45 + 0.35 * in.energy * k.voiceLight));
     color += base * ndf * 0.18;
     color *= mix(0.55, 1.0, saturate(in.displacement * 6.0 + 0.6));   // valleys pool shadow
     color *= mix(0.6, 1.0, ndv);                                        // edges fall off like the reference
 
     float spec = pow(saturate(dot(nrm, h)), 18.0) * 0.14 + pow(saturate(dot(nrm, h)), 60.0) * 0.12;
-    color += float3(0.95, 0.9, 1.0) * spec;
-    color += float3(0.45, 0.25, 0.75) * pow(1.0 - ndv, 3.0) * 0.5 * u.dark;
+    color += float3(0.95, 0.9, 1.0) * spec * k.shine;
+    color += float3(0.45, 0.25, 0.75) * pow(1.0 - ndv, 3.0) * 0.5 * u.dark * k.glow;
     color *= 1.0 - 0.2 * u.calm;
+    color = max(hueShift(color, k.hue), 0.0) * k.brightness;
     return float4(color, 1.0);
 }
 
@@ -283,7 +316,7 @@ static float orbOutline(float2 dir, constant MorphUniforms &u) {
     float3x3 m = float3x3(u.orbModel[0].xyz, u.orbModel[1].xyz, u.orbModel[2].xyz);
     float s = length(m[0]);
     float3 n = normalize(transpose(m) * float3(dir.x, -dir.y, 0.0));
-    float d = orbDisplacement(n, u.orbTime, u.speaking, u.level, u.voice.xyz, u.motion, u.calm);
+    float d = orbDisplacement(n, u.orbTime, u.speaking, u.level, u.voice.xyz, u.motion, u.calm, orbStandardTune());
     return u.size.y * 0.5 * tan(asin(min(s * (1.0 + d) / 4.3, 0.99))) / tan(0.31);
 }
 
