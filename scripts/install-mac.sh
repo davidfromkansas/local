@@ -13,12 +13,14 @@ xcodegen generate --quiet
 
 build() {
   xcodebuild -project Taki.xcodeproj -scheme TakiMac -configuration Release -destination 'platform=macOS' \
-    -derivedDataPath build/MacRelease -skipPackagePluginValidation -skipMacroValidation "$@" build \
+    -derivedDataPath build/MacRelease -skipPackagePluginValidation -skipMacroValidation \
+    ARCHS=arm64 ONLY_ACTIVE_ARCH=YES "$@" build \
     | { command -v xcbeautify >/dev/null && xcbeautify --quiet || grep -E "error:|BUILD" || true; }
   return "${PIPESTATUS[0]}"
 }
 
 echo "Building Taki for Mac (the first build takes a few minutes)…"
+# Apple silicon only: MLX/speech-swift use Float16, which doesn't exist on Intel Macs.
 # Signed with your Apple ID's team so macOS remembers the Microphone/Accessibility permissions
 # across updates. Falls back to a local-only signature if Xcode isn't signed in.
 if ! build -allowProvisioningUpdates; then
