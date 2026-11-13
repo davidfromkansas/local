@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.davidfromkansas
   deploymentTarget:
     iOS: "26.0"
+    macOS: "26.0"
   createIntermediateGroups: true
   developmentLanguage: en
 configFiles:
@@ -21,6 +22,8 @@ settings:
 packages:
   TakiKit:
     path: Packages/TakiKit
+  TakiMac:
+    path: Packages/TakiMac
 targets:
   Taki:
     type: application
@@ -102,6 +105,33 @@ targets:
             PrefersRightToLeft: false
             PrimaryLanguage: en-US
             RequestsOpenAccess: true
+  TakiMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Mac
+      - path: Keyboard/OrbRenderer.swift
+      - path: Keyboard/Orb.metal
+    dependencies:
+      - package: TakiKit
+        product: TakiCore
+      - package: TakiMac
+        product: TakiMacEngine
+    entitlements:
+      path: Config/TakiMac.entitlements
+      properties:
+        com.apple.security.device.audio-input: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_BUNDLE_ID).mac
+        PRODUCT_NAME: Taki
+        TARGETED_DEVICE_FAMILY: ""
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Taki
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Taki listens only while you hold the talk key. Speech is turned into text on this Mac and never leaves it.
   TakiTests:
     type: bundle.unit-test
     platform: iOS
@@ -134,5 +164,13 @@ schemes:
       targets:
         - TakiTests
         - package: TakiKit/TakiCoreTests
+    archive:
+      config: Release
+  TakiMac:
+    build:
+      targets:
+        TakiMac: all
+    run:
+      config: Debug
     archive:
       config: Release

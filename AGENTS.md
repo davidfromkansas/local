@@ -11,6 +11,8 @@ Taki is an offline, Wispr Flow-style voice keyboard for iPhone (iOS 26+, Swift 6
 | `Keyboard/` | Keyboard extension `TakiKeyboard` (`…taki.keyboard`, `RequestsOpenAccess = YES`). UI + `textDocumentProxy` only. |
 | `Shared/` | SwiftUI compiled into both targets (`MicOrb`, `LevelWaveform`, theme). |
 | `Packages/TakiKit` | `TakiCore` (pure logic: IPC, `SessionMachine`, `TextCleaner`, WER; linked by both targets) and `TakiEngine` (FluidAudio ASR + Foundation Models cleanup; **app only**). |
+| `Mac/` | macOS menu-bar app `TakiMac` (`…taki.mac`, product `Taki.app`): hold-to-talk hotkey, mic capture, floating orb (`Keyboard/OrbRenderer.swift` + `Orb.metal` are shared), paste into the focused app, history, dictionary. See `docs/MAC.md`. |
+| `Packages/TakiMac` | `TakiMacEngine` (macOS only): Qwen3-ASR 1.7B via speech-swift + Qwen LLM cleanup via mlx-swift-lm, both on MLX (GPU). `Bench` for recorded clips. |
 | `Tests/TakiTests` | App-hosted tests incl. the ASR accuracy test and its `say` clips (`scripts/make-clips.sh`). |
 | `.agents/skills/` | Vendored Emil Kowalski design skills (MIT). Read them before UI work; run `review-animations` + `break-ui` on UI changes. |
 
@@ -42,6 +44,14 @@ Darwin notifications carry **no payload**, only names `com.davidfromkansas.taki.
 - Models download once to Application Support/Taki/Models (onboarding), then are compiled and kept loaded.
 - Cleanup = `TextCleaner` rules (fillers, stutters, "actually I mean" self-corrections, dictionary, punctuation) → optional Apple Foundation Models light edit (`LLMCleaner`), rejected if length ratio is outside 0.6–1.2 → dictionary re-applied.
 
+## Mac app (TakiMac)
+One speech model, no live words: hold the hotkey (default Right Option) → `MicCapture` records 16 kHz mono (nonisolated, audio thread) → release → `SpeechGain` (TakiCore: trims silence, lifts quiet speech) → `SpeechTranscriber` (Qwen3-ASR 1.7B 8-bit MLX, or the Musci fine-tune converted on-device by `MusciConverter`) → `TextCleaner` → `LLMPolisher` (Qwen 4-bit MLX, transcript fenced in `<dictation>` tags, few-shot "questions stay questions") → `PolishGuard` (TakiCore) rejects answers/rewrites → dictionary → `TextInserter` (clipboard + ⌘V, clipboard restored). Needs Microphone + Accessibility. Not sandboxed (global key monitor, synthetic ⌘V).
+- Models live in `~/Library/Application Support/Taki/Models/{speech-*,cleanup-*}`; downloaded once, then loaded with `offlineMode`.
+- Benchmark: `Taki.app/Contents/MacOS/Taki --bench [--speech qwen3,musci] [--cleanup qwen3-4b-2507,…] [--out r.md] <dir with clips.json>...`
+- `TAKI_TEST_AUDIO=/path/clip.wav` makes the recorder play that clip instead of the mic (cloud Mac has no mic).
+- Install on a real Mac: `scripts/install-mac.sh`. On the cloud VM build unsigned: add `CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`.
+- The cloud VM's GPU is paravirtual: Mac latency measured there is far slower than an M-series laptop.
+
 ## Build & test
 ```bash
 brew install xcodegen          # once
@@ -49,6 +59,7 @@ scripts/build.sh               # xcodegen + simulator build (warnings are errors
 scripts/build.sh test          # unit tests (TakiCoreTests + TakiTests)
 TEST_RUNNER_TAKI_ASR_TESTS=1 scripts/build.sh test   # + ASR WER/latency (downloads ~1 GB once)
 cd Packages/TakiKit && swift test                    # fast pure-logic tests on macOS
+xcodebuild -project Taki.xcodeproj -scheme TakiMac -destination 'platform=macOS' build   # Mac app
 scripts/testflight.sh          # archive + upload; needs ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, (TEAM_ID)
 ```
 
