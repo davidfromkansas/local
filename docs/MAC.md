@@ -19,8 +19,9 @@ Hold a key, talk, let go: Taki types what you said into whatever app you're in. 
 
 ## Use
 
-- Click into any text box. Hold **Right Option**, talk, then let go. The orb at the bottom of the screen moves with your voice while you talk. When you let go, the text appears.
-- Quick taps and key combos with Right Option are ignored, so ⌥ shortcuts keep working. You can switch the key to Right Command or Fn on the Home tab.
+- Click into any text box. Hold **Fn (🌐)**, talk, then let go. While you talk, the purple 3D Taki orb floats at the bottom of the screen and moves with your voice. When you let go, the text appears.
+- macOS also uses Fn by itself (emoji picker or dictation). Taki shows a button for this: set System Settings › Keyboard › "Press 🌐 key to" to **Do Nothing**.
+- To use a different key, pick Right Option, Right Command or Right Control under **Hold-to-talk key** on the Home tab, or from the menu-bar menu. Quick taps and key combos are ignored, so your normal shortcuts keep working.
 - **History** lists what you dictated and how long each one took after you let go. **Dictionary** fixes words Taki keeps getting wrong (for example "taki" → "Taki"). Taki also feeds those words to the speech model as hints.
 - Turn off **Clean up with a local AI model** in the Models tab for the fastest, word-for-word output.
 

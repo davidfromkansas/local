@@ -30,6 +30,7 @@ final class MacModel {
     var dictionary: [DictionaryEntry] = [] { didSet { save(dictionary, to: "dictionary.json") } }
     private(set) var accessibilityTrusted = AXIsProcessTrusted()
     private(set) var micAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+    private(set) var systemUsesFnKey = Hotkey.systemUsesFnKey
 
     var cleanupModel: CleanupModelChoice {
         didSet { defaults.set(cleanupModel.rawValue, forKey: "cleanupModel"); if oldValue != cleanupModel { Task { await load() } } }
@@ -51,7 +52,7 @@ final class MacModel {
         engine = DictationEngine(store: store)
         cleanupModel = CleanupModelChoice(rawValue: defaults.string(forKey: "cleanupModel") ?? "") ?? .qwen3_4B
         cleanupEnabled = defaults.object(forKey: "cleanupEnabled") as? Bool ?? true
-        hotkey = Hotkey(rawValue: defaults.string(forKey: "hotkey") ?? "") ?? .rightOption
+        hotkey = Hotkey(rawValue: defaults.string(forKey: "hotkey") ?? "") ?? .fn
         history = load([HistoryItem].self, from: "history.json") ?? []
         dictionary = load([DictionaryEntry].self, from: "dictionary.json") ?? []
         if let path = ProcessInfo.processInfo.environment["TAKI_TEST_AUDIO"] {
@@ -92,6 +93,7 @@ final class MacModel {
     func refreshPermissions() {
         accessibilityTrusted = AXIsProcessTrusted()
         micAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        systemUsesFnKey = Hotkey.systemUsesFnKey
     }
 
     func requestAccessibility() {

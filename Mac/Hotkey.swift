@@ -1,8 +1,8 @@
 import AppKit
 
-/// Modifier keys that work as a hold-to-talk button on their own.
+/// Keys that work as a hold-to-talk button on their own. Fn is the default, like Wispr Flow.
 enum Hotkey: String, CaseIterable, Identifiable {
-    case rightOption, rightCommand, fn
+    case fn, rightOption, rightCommand, rightControl
 
     var id: String { rawValue }
 
@@ -10,6 +10,7 @@ enum Hotkey: String, CaseIterable, Identifiable {
         switch self {
         case .rightOption: "Right Option (⌥)"
         case .rightCommand: "Right Command (⌘)"
+        case .rightControl: "Right Control (⌃)"
         case .fn: "Fn (🌐)"
         }
     }
@@ -18,6 +19,7 @@ enum Hotkey: String, CaseIterable, Identifiable {
         switch self {
         case .rightOption: 61
         case .rightCommand: 54
+        case .rightControl: 62
         case .fn: 63
         }
     }
@@ -26,15 +28,26 @@ enum Hotkey: String, CaseIterable, Identifiable {
         switch self {
         case .rightOption: .option
         case .rightCommand: .command
+        case .rightControl: .control
         case .fn: .function
         }
+    }
+
+    /// macOS also acts on a lone Fn press (emoji picker, dictation…) unless
+    /// System Settings › Keyboard › "Press 🌐 key to" is "Do Nothing" (`AppleFnUsageType` 0).
+    static var systemUsesFnKey: Bool {
+        UserDefaults(suiteName: "com.apple.HIToolbox")?.object(forKey: "AppleFnUsageType") as? Int != 0
+    }
+
+    static func openKeyboardSettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!)
     }
 }
 
 /// Watches the hotkey in every app. Pressing any other key while holding it cancels, so normal
 /// shortcuts (⌥+letter, ⌘+Tab) don't start a dictation. Needs Accessibility permission.
 final class HotkeyMonitor {
-    var hotkey: Hotkey = .rightOption
+    var hotkey: Hotkey = .fn
     var onPress: () -> Void = {}
     var onRelease: () -> Void = {}
     var onInterrupt: () -> Void = {}

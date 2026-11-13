@@ -9,13 +9,13 @@ final class OrbOverlay {
     private let view: MTKView
 
     init(voice: VoiceLevels) {
-        let size = NSSize(width: 132, height: 132)
+        let size = NSSize(width: 220, height: 220)
         panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: true)
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = false
+        panel.hasShadow = true
         panel.level = .statusBar
         panel.ignoresMouseEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
@@ -35,9 +35,10 @@ final class OrbOverlay {
     func show() {
         let screen = NSScreen.main ?? NSScreen.screens.first
         if let frame = screen?.visibleFrame {
-            panel.setFrameOrigin(NSPoint(x: frame.midX - panel.frame.width / 2, y: frame.minY + 36))
+            panel.setFrameOrigin(NSPoint(x: frame.midX - panel.frame.width / 2, y: frame.minY + 24))
         }
-        renderer?.dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        // The violet rim keeps the deep-purple orb readable over any window, light or dark.
+        renderer?.dark = true
         renderer?.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         view.isPaused = false
         panel.alphaValue = 0

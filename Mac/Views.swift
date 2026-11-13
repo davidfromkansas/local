@@ -15,6 +15,10 @@ struct MenuContent: View {
             Button("Copy last: \(last.text.prefix(40))") { model.copy(last.text) }
         }
         Divider()
+        Picker("Hold to Talk Key", selection: Bindable(model).hotkey) {
+            ForEach(Hotkey.allCases) { Text($0.displayName).tag($0) }
+        }
+        Divider()
         Button("Open Taki…") {
             openWindow(id: "main")
             NSApp.activate()
@@ -79,15 +83,19 @@ private struct HomeTab: View {
                         .disabled({ if case .loading = model.phase { true } else { false } }())
                 }
             }
-            Section("How to use") {
-                Picker("Hold to talk", selection: $model.hotkey) {
+            Section("Hold-to-talk key") {
+                Picker("Key", selection: $model.hotkey) {
                     ForEach(Hotkey.allCases) { Text($0.displayName).tag($0) }
                 }
                 Text("Click into any text field, hold the key, talk, and let go. Taki types what you said.")
                     .foregroundStyle(.secondary)
-                if model.hotkey == .fn {
-                    Text("For Fn: System Settings › Keyboard › “Press 🌐 key to” › Do Nothing.")
-                        .font(.caption).foregroundStyle(.secondary)
+                if model.hotkey == .fn && model.systemUsesFnKey {
+                    LabeledContent {
+                        Button("Open Keyboard Settings") { Hotkey.openKeyboardSettings() }
+                    } label: {
+                        Text("macOS also uses Fn. Set “Press 🌐 key to” to “Do Nothing”.")
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
         }
