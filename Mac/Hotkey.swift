@@ -36,7 +36,8 @@ enum Hotkey: String, CaseIterable, Identifiable {
     /// macOS also acts on a lone Fn press (emoji picker, dictation…) unless
     /// System Settings › Keyboard › "Press 🌐 key to" is "Do Nothing" (`AppleFnUsageType` 0).
     static var systemUsesFnKey: Bool {
-        UserDefaults(suiteName: "com.apple.HIToolbox")?.object(forKey: "AppleFnUsageType") as? Int != 0
+        // Unset means the factory default, which System Settings shows as "Do Nothing".
+        (UserDefaults(suiteName: "com.apple.HIToolbox")?.object(forKey: "AppleFnUsageType") as? Int ?? 0) != 0
     }
 
     static func openKeyboardSettings() {
