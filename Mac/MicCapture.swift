@@ -16,6 +16,10 @@ nonisolated final class MicCapture: @unchecked Sendable {
     /// When set (TAKI_TEST_AUDIO), this clip "plays" into the recorder in real time instead of the mic.
     /// For Macs without a microphone, like the cloud test machine.
     var testAudio: [Float]?
+    /// Off for the Orb Tuner preview: it only needs the levels, not the recording.
+    var keepsSamples = true
+    /// Orb Tuner preview: replay the test clip forever instead of falling silent.
+    var loopsTestAudio = false
 
     func start() throws {
         lock.withLock {
@@ -59,7 +63,7 @@ nonisolated final class MicCapture: @unchecked Sendable {
     private func append(_ chunk: [Float]) {
         let rms = (chunk.reduce(Float(0)) { $0 + $1 * $1 } / Float(max(1, chunk.count))).squareRoot()
         lock.withLock {
-            samples.append(contentsOf: chunk)
+            if keepsSamples { samples.append(contentsOf: chunk) }
             level = Self.normalized(rms: rms)
             analyzer.append(chunk)
         }
@@ -84,9 +88,11 @@ nonisolated final class MicCapture: @unchecked Sendable {
 
     private func startFeed(_ clip: [Float]) {
         var position = 0
+        let loops = loopsTestAudio
         let timer = DispatchSource.makeTimerSource(queue: .global(qos: .userInteractive))
         timer.schedule(deadline: .now(), repeating: .milliseconds(20))
         timer.setEventHandler { [weak self] in
+            if loops && position >= clip.count { position = 0 }
             let end = min(clip.count, position + 320)
             // After the clip ends, keep feeding near-silence until the key is released.
             let chunk = position < clip.count ? Array(clip[position..<end]) : [Float](repeating: 0, count: 320)

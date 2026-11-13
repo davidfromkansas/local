@@ -111,6 +111,7 @@ targets:
     sources:
       - path: Mac
       - path: Keyboard/OrbRenderer.swift
+      - path: Keyboard/OrbTuning.swift
       - path: Keyboard/Orb.metal
     dependencies:
       - package: TakiKit

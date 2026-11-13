@@ -11,6 +11,11 @@ struct TakiMacApp: App {
         .defaultSize(width: 560, height: 640)
         .defaultLaunchBehavior(delegate.model.needsSetup ? .presented : .suppressed)
 
+        Window("Orb Tuner", id: "orbTuner") {
+            OrbTunerWindow(model: delegate.model)
+        }
+        .defaultSize(width: 860, height: 720)
+
         MenuBarExtra {
             MenuContent(model: delegate.model)
         } label: {

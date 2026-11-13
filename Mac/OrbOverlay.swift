@@ -7,9 +7,11 @@ final class OrbOverlay {
     private let panel: NSPanel
     private let renderer: OrbRenderer?
     private let view: MTKView
+    private let tuning: OrbTuningStore
 
-    init(voice: VoiceLevels) {
-        let size = NSSize(width: 220, height: 220)
+    init(voice: VoiceLevels, tuning: OrbTuningStore) {
+        self.tuning = tuning
+        let size = NSSize(width: CGFloat(tuning.tuning.size), height: CGFloat(tuning.tuning.size))
         panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: true)
@@ -27,16 +29,24 @@ final class OrbOverlay {
         view.depthStencilPixelFormat = .depth32Float
         view.preferredFramesPerSecond = 120
         view.isPaused = true
+        view.autoresizingMask = [.width, .height]
         renderer = OrbRenderer(model: voice)
+        renderer?.tuningSource = { [weak tuning] in tuning?.tuning ?? .standard }
         renderer?.attach(to: view)
         panel.contentView = view
     }
 
-    func show() {
+    /// Size and spot from the Orb Tuner.
+    func layout() {
+        let side = CGFloat(tuning.tuning.size)
         let screen = NSScreen.main ?? NSScreen.screens.first
-        if let frame = screen?.visibleFrame {
-            panel.setFrameOrigin(NSPoint(x: frame.midX - panel.frame.width / 2, y: frame.minY + 24))
-        }
+        guard let frame = screen?.visibleFrame else { return }
+        panel.setFrame(NSRect(x: frame.midX - side / 2, y: frame.minY + CGFloat(tuning.tuning.bottom), width: side, height: side),
+                       display: true)
+    }
+
+    func show() {
+        layout()
         // The violet rim keeps the deep-purple orb readable over any window, light or dark.
         renderer?.dark = true
         renderer?.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion

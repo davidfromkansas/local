@@ -16,7 +16,9 @@
 		199BEBF128B57DD056B69C97 /* TakiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95C196B3D5A76156B0B97950 /* TakiApp.swift */; };
 		1C3EEA317459C2CEDBA8AB6C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2D0B57E87EB9F65B792E594E /* Assets.xcassets */; };
 		1CCBC79D8D2280027C01335E /* TakiCore in Frameworks */ = {isa = PBXBuildFile; productRef = EEBDA32635A472C84EDBD228 /* TakiCore */; };
+		221543822656295A5D365491 /* OrbTuning.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E6FA1B5B34A8D2BE63C528 /* OrbTuning.swift */; };
 		31BD358BB3ACD4B150F786D3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADE909E73247F5651AC6F6B /* Theme.swift */; };
+		32B53F81B3AA60EB39D8EEB8 /* OrbTuner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CCFA1D7539396619CF1FAC5 /* OrbTuner.swift */; };
 		36C9794A43224A14F8B5A4C9 /* clips.json in Resources */ = {isa = PBXBuildFile; fileRef = 6F6F6D5DE2B47F40C0D63565 /* clips.json */; };
 		378F2F0DCDC49F6B9EA9634E /* 08-long.wav in Resources */ = {isa = PBXBuildFile; fileRef = 36B9134D9FE2D27DB9A3DCF9 /* 08-long.wav */; };
 		3AC8B96769A45808A64058F2 /* OrbOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79C760E83AF5F83805A97C1F /* OrbOverlay.swift */; };
@@ -57,6 +59,7 @@
 		BD97932D045D39D6E19AE86C /* Orb.metal in Sources */ = {isa = PBXBuildFile; fileRef = BA3773B33E9EEB76552A2039 /* Orb.metal */; };
 		BDD7A9E93217317B97A7AE09 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B4E02A1CBD6B296780E3F1 /* HistoryView.swift */; };
 		C0AA609061AFA027D3999110 /* 01-meeting.wav in Resources */ = {isa = PBXBuildFile; fileRef = 05D050FDCA1C18AD58E4AE94 /* 01-meeting.wav */; };
+		C2C4ECEEA09A1A82CB46A3F2 /* OrbTuning.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E6FA1B5B34A8D2BE63C528 /* OrbTuning.swift */; };
 		C3F9E4F88969C9E14001BA5D /* 09-filler.wav in Resources */ = {isa = PBXBuildFile; fileRef = 00D8CC7B11E1B22E364DA967 /* 09-filler.wav */; };
 		D370D380473F8D373034A227 /* TakiEngine in Frameworks */ = {isa = PBXBuildFile; productRef = CD25382AA40E2F2BF7425AE3 /* TakiEngine */; };
 		D722A00B78DA11AD74CFC8DF /* OrbRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA5CD4B8945B0740C89AD95 /* OrbRenderer.swift */; };
@@ -138,7 +141,9 @@
 		92E549F156E576A078A54838 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		95C196B3D5A76156B0B97950 /* TakiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakiApp.swift; sourceTree = "<group>"; };
 		99F699E8D8D36AC5AF73C2C8 /* TakiTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TakiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9CCFA1D7539396619CF1FAC5 /* OrbTuner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbTuner.swift; sourceTree = "<group>"; };
 		A0D57466FF55C5470BAA635B /* OrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbView.swift; sourceTree = "<group>"; };
+		A1E6FA1B5B34A8D2BE63C528 /* OrbTuning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbTuning.swift; sourceTree = "<group>"; };
 		AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardModel.swift; sourceTree = "<group>"; };
 		B0CDFBD44E0D3765F439C9F9 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
 		BA3773B33E9EEB76552A2039 /* Orb.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Orb.metal; sourceTree = "<group>"; };
@@ -253,6 +258,7 @@
 				FEAD0DD38589E619D2CF0F0A /* KeyTouches.swift */,
 				BA3773B33E9EEB76552A2039 /* Orb.metal */,
 				5BA5CD4B8945B0740C89AD95 /* OrbRenderer.swift */,
+				A1E6FA1B5B34A8D2BE63C528 /* OrbTuning.swift */,
 				A0D57466FF55C5470BAA635B /* OrbView.swift */,
 				6A1753097FE06E8D25909EEE /* PrivacyInfo.xcprivacy */,
 			);
@@ -357,6 +363,7 @@
 				6E8997A9F65361E55A92A2B6 /* MacModel.swift */,
 				0197D571269187422BA3857C /* MicCapture.swift */,
 				79C760E83AF5F83805A97C1F /* OrbOverlay.swift */,
+				9CCFA1D7539396619CF1FAC5 /* OrbTuner.swift */,
 				0D4AF10D9FC9CBDD2A0C3053 /* TakiMacApp.swift */,
 				794BBA68360C6EF8A11DC966 /* TextInserter.swift */,
 				399BAA4A41E672651DB76DC1 /* Views.swift */,
@@ -579,6 +586,7 @@
 				EEC4E177DA64FAD5EF83CF79 /* MicOrb.swift in Sources */,
 				967AEC9E47F9C9533104E9E8 /* Orb.metal in Sources */,
 				46E999668707BD5BAE07E800 /* OrbRenderer.swift in Sources */,
+				C2C4ECEEA09A1A82CB46A3F2 /* OrbTuning.swift in Sources */,
 				BB17A7701C08A3940DAB5352 /* OrbView.swift in Sources */,
 				DB8258543534801EB3C9C0F8 /* Theme.swift in Sources */,
 			);
@@ -595,6 +603,8 @@
 				BD97932D045D39D6E19AE86C /* Orb.metal in Sources */,
 				3AC8B96769A45808A64058F2 /* OrbOverlay.swift in Sources */,
 				D722A00B78DA11AD74CFC8DF /* OrbRenderer.swift in Sources */,
+				32B53F81B3AA60EB39D8EEB8 /* OrbTuner.swift in Sources */,
+				221543822656295A5D365491 /* OrbTuning.swift in Sources */,
 				F2B47165BCF93E21AD9C4303 /* TakiMacApp.swift in Sources */,
 				5604E0CDB85E8550E3A38A8C /* TextInserter.swift in Sources */,
 				D79EB512AE78317165F2A078 /* Views.swift in Sources */,

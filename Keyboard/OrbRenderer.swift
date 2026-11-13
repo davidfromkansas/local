@@ -25,12 +25,16 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     private let depth: MTLDepthStencilState
     var reduceMotion = false
     var dark = false
+    var tuning = OrbTuning.standard
+    /// Read every frame when set, so a live settings screen can reshape the orb.
+    var tuningSource: (() -> OrbTuning)?
 
     private var bands = [Float](repeating: 0, count: SpectrumAnalyzer.bandCount)
     private var level: Float = 0
     private var speaking: Float = 0
     private var calm: Float = 0
     private var time: Float = 0
+    private var spin: Float = 0
     private var lastFrame = CACurrentMediaTime()
 
     init?(model: any OrbVoiceSource) {
@@ -63,6 +67,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let now = CACurrentMediaTime()
         let dt = Float(min(0.1, now - lastFrame))
         lastFrame = now
+        if let tuningSource { tuning = tuningSource() }
         advance(dt: dt)
 
         guard let pass = view.currentRenderPassDescriptor, let drawable = view.currentDrawable,
@@ -71,13 +76,16 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let size = view.drawableSize
         var uniforms = makeUniforms(aspect: Float(size.width / max(1, size.height)))
         var voice = voiceRanges()
+        var tune = tuning.shader
         Self.latest = (uniforms, voice)
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depth)
         encoder.setCullMode(.none)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<OrbUniforms>.stride, index: 0)
         encoder.setVertexBytes(&voice, length: MemoryLayout<SIMD3<Float>>.stride, index: 1)
+        encoder.setVertexBytes(&tune, length: MemoryLayout<OrbShaderTuning>.stride, index: 2)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<OrbUniforms>.stride, index: 0)
+        encoder.setFragmentBytes(&tune, length: MemoryLayout<OrbShaderTuning>.stride, index: 1)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: Int(cols + 1) * 2, instanceCount: Int(rows))
         encoder.endEncoding()
         buffer.present(drawable)
@@ -87,18 +95,21 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     /// Smoothing rates are per 60 Hz frame; `ease` rescales them so 120 Hz ProMotion feels the same.
     private func advance(dt: Float) {
         func ease(_ rate: Float) -> Float { 1 - pow(1 - rate, dt * 60) }
+        let t = tuning
         let target = model?.spectrum ?? []
         for i in bands.indices {
-            let goal = i < target.count ? target[i] : 0
-            bands[i] += (goal - bands[i]) * ease(goal > bands[i] ? 0.55 : 0.12)
+            let goal = i < target.count ? min(1, target[i] * t.sensitivity) : 0
+            bands[i] += (goal - bands[i]) * ease(goal > bands[i] ? t.attack : t.release)
         }
-        let loud = model?.level ?? 0
-        level += (loud - level) * ease(loud > level ? 0.5 : 0.1)
-        let voiced: Float = loud > 0.3 ? 1 : 0
+        let loud = min(1, (model?.level ?? 0) * t.sensitivity)
+        level += (loud - level) * ease(loud > level ? t.attack * (0.5 / 0.55) : t.release * (0.1 / 0.12))
+        let voiced: Float = loud > t.threshold ? 1 : 0
         speaking += (voiced - speaking) * ease(voiced > speaking ? 0.35 : 0.04)
         let settling: Float = model?.isSettling == true ? 1 : 0
         calm += (settling - calm) * ease(0.08)
-        time += dt * (reduceMotion ? 0.35 : 1) * (1 + speaking * 0.6)
+        let pace = dt * (reduceMotion ? 0.35 : 1) * (1 + speaking * t.talkBoost)
+        time += pace * t.flow
+        spin += pace * t.spin
     }
 
     /// Low / mid / high averages of the smoothed bands.
@@ -124,7 +135,7 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
         let eye = SIMD3<Float>(0, 0, Self.eyeDistance)
         let projection = Self.perspective(fovY: Self.fovY, aspect: aspect, near: 0.1, far: 20)
         let viewMatrix = Self.translation(-eye)
-        let spin = reduceMotion ? 0 : time * 0.12
+        let spin = reduceMotion ? 0 : self.spin
         let model = Self.rotationX(0.35) * Self.rotationY(spin) * Self.scale(Self.orbScale(calm: calm))
         return OrbUniforms(viewProjection: projection * viewMatrix, model: model, time: time, level: level,
                            speaking: speaking, calm: calm, cols: cols, rows: rows,

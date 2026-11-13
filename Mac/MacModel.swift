@@ -40,10 +40,14 @@ final class MacModel {
 
     let store = ModelStore()
     let voice = VoiceLevels()
+    let orbTuning = OrbTuningStore()
+    /// The Orb Tuner's "try it with my voice": mic → orb only, nothing is recorded or typed.
+    private(set) var orbPreviewing = false
     @ObservationIgnored private let engine: DictationEngine
     @ObservationIgnored private let capture = MicCapture()
     @ObservationIgnored private let hotkeyMonitor = HotkeyMonitor()
-    @ObservationIgnored private lazy var overlay = OrbOverlay(voice: voice)
+    @ObservationIgnored private lazy var overlay = OrbOverlay(voice: voice, tuning: orbTuning)
+    @ObservationIgnored private let previewCapture = MicCapture()
     @ObservationIgnored private let defaults = UserDefaults.standard
     @ObservationIgnored private var levelTimer: Timer?
     @ObservationIgnored private var pressedAt: ContinuousClock.Instant?
@@ -57,7 +61,10 @@ final class MacModel {
         dictionary = load([DictionaryEntry].self, from: "dictionary.json") ?? []
         if let path = ProcessInfo.processInfo.environment["TAKI_TEST_AUDIO"] {
             capture.testAudio = try? AudioLoader.load16kMono(URL(filePath: path))
+            previewCapture.testAudio = capture.testAudio
         }
+        previewCapture.keepsSamples = false
+        previewCapture.loopsTestAudio = true
     }
 
     var needsSetup: Bool { !modelsDownloaded || !accessibilityTrusted }
@@ -128,6 +135,7 @@ final class MacModel {
     // MARK: Hold to talk
 
     private func begin() {
+        if orbPreviewing { setOrbPreview(false) }
         guard phase == .ready else {
             if case .failed = phase {} else if phase == .needsModels { NSSound.beep() }
             return
@@ -194,6 +202,40 @@ final class MacModel {
         _ = capture.stop()
         overlay.hide()
         phase = .ready
+    }
+
+    // MARK: Orb Tuner
+
+    func setOrbPreview(_ on: Bool) {
+        guard on != orbPreviewing, phase != .listening, phase != .processing else { return }
+        if on {
+            do { try previewCapture.start() } catch {
+                phase = .failed("Microphone: \(error.localizedDescription)")
+                return
+            }
+            orbPreviewing = true
+            voice.isSettling = false
+            overlay.show()
+            levelTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let (level, bands) = self.previewCapture.levels()
+                    self.voice.level = level
+                    self.voice.spectrum = bands
+                }
+            }
+        } else {
+            orbPreviewing = false
+            levelTimer?.invalidate()
+            _ = previewCapture.stop()
+            voice.level = 0
+            voice.spectrum = []
+            overlay.hide()
+        }
+    }
+
+    func orbLayoutChanged() {
+        if orbPreviewing { overlay.layout() }
     }
 
     func clearHistory() {

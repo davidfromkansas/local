@@ -19,6 +19,10 @@ struct MenuContent: View {
             ForEach(Hotkey.allCases) { Text($0.displayName).tag($0) }
         }
         Divider()
+        Button("Orb Tuner…") {
+            openWindow(id: "orbTuner")
+            NSApp.activate()
+        }
         Button("Open Taki…") {
             openWindow(id: "main")
             NSApp.activate()
@@ -59,6 +63,7 @@ struct MainWindow: View {
 
 private struct HomeTab: View {
     @Bindable var model: MacModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Form {
@@ -96,6 +101,11 @@ private struct HomeTab: View {
                         Text("macOS also uses Fn. Set “Press 🌐 key to” to “Do Nothing”.")
                             .foregroundStyle(.orange)
                     }
+                }
+            }
+            Section("Orb") {
+                LabeledContent("Change how the orb looks and moves with your voice") {
+                    Button("Open Orb Tuner") { openWindow(id: "orbTuner") }
                 }
             }
         }
