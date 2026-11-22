@@ -2,20 +2,20 @@
 
 Hold a key, talk, let go: Taki types what you said into whatever app you're in. Everything runs on your Mac. After the first-time model download (about 5 GB) it works with Wi-Fi off.
 
-## Install (once, about 10 minutes)
+## Install (about 2 minutes, plus a 5 GB download)
 
-1. Install **Xcode** from the App Store and open it once. In Xcode › Settings › Accounts, sign in with your Apple ID.
-2. Open **Terminal** and run:
-   ```bash
-   git clone https://github.com/davidfromkansas/local.git ~/Taki
-   cd ~/Taki
-   scripts/install-mac.sh
-   ```
-   This builds the app, copies it to Applications, and opens it. The first build takes a few minutes. To update later: `cd ~/Taki && git pull && scripts/install-mac.sh`.
-3. Taki shows up as a little waveform in the menu bar (top right) and opens its window. In the window:
-   - **Models › Download**: about 5 GB, one time only.
-   - **Microphone › Allow**.
-   - **Accessibility › Open Settings**, then turn on Taki in System Settings › Privacy & Security › Accessibility. Taki needs this so it can type into other apps.
+Needs a Mac with Apple silicon (M1 or newer) and macOS 26 or later.
+
+1. Download **Taki-x.y.z.dmg** from the newest release at https://github.com/davidfromkansas/local/releases (under "Assets").
+2. Open it and drag **Taki** onto the **Applications** folder. Then eject the disk image.
+3. Open Taki from Applications. It shows up as a little waveform in the menu bar (top right) and opens its window with three steps, in this order:
+   1. **Download the speech models**: about 5 GB, one time only.
+   2. **Allow the microphone**.
+   3. **Let Taki type for you**: click Open Settings, then turn on Taki under Privacy & Security › Accessibility. Taki needs this so it can paste your words into other apps.
+
+Taki updates itself: when a new version is out it asks whether to install it (or use **Check for Updates…** in the menu-bar menu).
+
+**Building it yourself instead**: install Xcode, then `git clone https://github.com/davidfromkansas/local.git ~/Taki && cd ~/Taki && scripts/install-mac.sh`. To update: `git pull && scripts/install-mac.sh`.
 
 ## Use
 
@@ -72,6 +72,8 @@ Before transcribing, Taki trims the silence at the start and end and turns up qu
 
 ## Benchmark it on your Mac
 
+Only in Debug builds (the downloadable app doesn't include it). Build one with `scripts/install-mac.sh -configuration Debug`, then:
+
 ```bash
 /Applications/Taki.app/Contents/MacOS/Taki --bench --out ~/Desktop/taki-bench.md ~/Taki/Tests/TakiTests/Clips
 ```
@@ -80,5 +82,22 @@ Any folder with a `clips.json` (`[{"file": "x.wav", "reference": "what was said"
 ## Troubleshooting
 
 - **Nothing gets typed**: Accessibility isn't on for Taki. After reinstalling, macOS sometimes needs you to turn it off and on again in System Settings.
-- **"Signing with your team failed"**: open Xcode › Settings › Accounts and sign in, then run the script again. Without it the app still works, but macOS may ask for permissions again after every update.
+- **"Taki can't be opened" or "Taki is damaged"**: you have a test build that isn't notarized. Download the .dmg from the Releases page instead.
+- **"Signing with your team failed"** (`install-mac.sh` only): open Xcode › Settings › Accounts and sign in, then run the script again. Without it the app still works, but macOS may ask for permissions again after every update.
 - The text also stays on the clipboard for half a second. After that, your previous clipboard comes back.
+
+## Releasing (for maintainers)
+
+`scripts/release-mac.sh` builds the Release app (Apple silicon), signs it with the Developer ID certificate (hardened runtime), notarizes and staples the app and the .dmg, checks Gatekeeper, writes a Sparkle `appcast.xml`, and uploads both to a **draft** GitHub Release tagged `mac-v<version>`. Publishing the draft is what ships it: installed copies read `releases/latest/download/appcast.xml`.
+
+1. Bump `TAKI_MAC_VERSION` in `Config/Base.xcconfig`.
+2. Run it with the credentials below, then publish the draft on GitHub.
+
+| Needs | How |
+|---|---|
+| "Developer ID Application" certificate | In the keychain, or `DEVELOPER_ID_P12=/path/cert.p12 DEVELOPER_ID_P12_PASSWORD=…` (imported into a temporary keychain). Only the Account Holder can create it, at developer.apple.com › Certificates. |
+| Notarization | `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (App Store Connect API key, same as `testflight.sh`). |
+| Sparkle update key | The private EdDSA key file at `~/.config/taki/sparkle_private_key` (or `SPARKLE_KEY_FILE=/path/key`, or the login keychain via `generate_keys --account taki`). Its public half is `TAKI_SPARKLE_PUBLIC_KEY` in `Config/Base.xcconfig`; the script refuses to run if they don't match. **Never commit the private key, and don't lose it**: without it no installed copy will accept another update. |
+| GitHub | `gh auth login` (or `GH_TOKEN`) with write access. |
+
+`scripts/release-mac.sh --adhoc` does a local test build (ad-hoc signature, no notarization, no upload) into `build/mac-release/`. Sparkle tools (`generate_keys`, `sign_update`) are in `build/MacRelease/SourcePackages/artifacts/sparkle/Sparkle/bin/` after a build.

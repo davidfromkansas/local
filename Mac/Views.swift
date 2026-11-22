@@ -4,6 +4,7 @@ import TakiMacEngine
 
 struct MenuContent: View {
     let model: MacModel
+    let updater: Updater
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -19,9 +20,14 @@ struct MenuContent: View {
             ForEach(Hotkey.allCases) { Text($0.displayName).tag($0) }
         }
         Divider()
+        #if DEBUG
         Button("Orb Tuner…") {
             openWindow(id: "orbTuner")
             NSApp.activate()
+        }
+        #endif
+        if updater.canCheck {
+            Button("Check for Updates…") { updater.checkForUpdates() }
         }
         Button("Open Taki…") {
             openWindow(id: "main")
@@ -76,17 +82,8 @@ private struct HomeTab: View {
                     }
                 }
             }
-            Section("Setup") {
-                step("Microphone", done: model.micAllowed || model.phase == .listening) {
-                    Button("Allow") { Task { await model.requestMicrophone() } }
-                }
-                step("Accessibility (to type into other apps)", done: model.accessibilityTrusted) {
-                    Button("Open Settings") { model.requestAccessibility() }
-                }
-                step("Models downloaded (one time, then fully offline)", done: model.modelsDownloaded) {
-                    Button("Download") { Task { await model.load() } }
-                        .disabled({ if case .loading = model.phase { true } else { false } }())
-                }
+            if model.needsSetup {
+                SetupSection(model: model)
             }
             Section("Hold-to-talk key") {
                 Picker("Key", selection: $model.hotkey) {
@@ -103,20 +100,68 @@ private struct HomeTab: View {
                     }
                 }
             }
+            #if DEBUG
             Section("Orb") {
                 LabeledContent("Change how the orb looks and moves with your voice") {
                     Button("Open Orb Tuner") { openWindow(id: "orbTuner") }
                 }
             }
+            #endif
         }
         .formStyle(.grouped)
     }
+}
 
-    private func step(_ title: String, done: Bool, @ViewBuilder action: () -> some View) -> some View {
+/// First launch: three numbered steps, done in order. Later steps wait until the earlier ones are done.
+private struct SetupSection: View {
+    let model: MacModel
+
+    private var loading: Bool { if case .loading = model.phase { true } else { false } }
+
+    var body: some View {
+        Section {
+            step(1, "Download the speech models",
+                 detail: loading ? model.statusText : "About 5 GB, one time only. After this Taki works with Wi-Fi off.",
+                 done: model.modelsDownloaded, enabled: true) {
+                if loading {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Download") { Task { await model.load() } }.buttonStyle(.borderedProminent)
+                }
+            }
+            step(2, "Allow the microphone",
+                 detail: "Taki only listens while you hold the talk key.",
+                 done: model.micAllowed, enabled: model.modelsDownloaded) {
+                Button("Allow") { Task { await model.requestMicrophone() } }.buttonStyle(.borderedProminent)
+            }
+            step(3, "Let Taki type for you",
+                 detail: "In the window that opens, turn on Taki under Accessibility. This lets Taki paste your words into other apps.",
+                 done: model.accessibilityTrusted, enabled: model.modelsDownloaded && model.micAllowed) {
+                Button("Open Settings") { model.requestAccessibility() }.buttonStyle(.borderedProminent)
+            }
+        } header: {
+            Text("Set up Taki in 3 steps")
+        }
+    }
+
+    private func step(_ number: Int, _ title: String, detail: String, done: Bool, enabled: Bool,
+                      @ViewBuilder action: () -> some View) -> some View {
         LabeledContent {
-            if done { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green) } else { action() }
+            if done {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            } else if enabled {
+                action()
+            }
         } label: {
-            Text(title)
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "\(number).circle.fill")
+                    .foregroundStyle(done ? Color.green : enabled ? Color.accentColor : Color.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .opacity(enabled || done ? 1 : 0.5)
         }
     }
 }

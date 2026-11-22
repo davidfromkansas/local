@@ -67,7 +67,7 @@ final class MacModel {
         previewCapture.loopsTestAudio = true
     }
 
-    var needsSetup: Bool { !modelsDownloaded || !accessibilityTrusted }
+    var needsSetup: Bool { !modelsDownloaded || !micAllowed || !accessibilityTrusted }
 
     var modelsDownloaded: Bool {
         store.isSpeechModelDownloaded && (!cleanupEnabled || store.isDownloaded(cleanupModel))

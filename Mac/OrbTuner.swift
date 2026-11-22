@@ -107,6 +107,7 @@ struct OrbKnob: Identifiable {
     }
 }
 
+#if DEBUG
 struct OrbTunerWindow: View {
     @Bindable var model: MacModel
     @State private var copied = false
@@ -222,3 +223,4 @@ private struct OrbPreview: NSViewRepresentable {
 
     func updateNSView(_ view: MTKView, context: Context) {}
 }
+#endif
