@@ -54,6 +54,7 @@
 		B2376AC8C6A612234BD144E9 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C42A087C5C3A2719BB9A89 /* AppModel.swift */; };
 		B806293F88BE8978A1919E51 /* KeyboardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCC33CC6969303A0E9B2457 /* KeyboardModel.swift */; };
 		B84B93A8023044A6C80CB826 /* TakiCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2B0A5FF77D9E5389EEB70EA /* TakiCore */; };
+		B9504E96E2D886E0835B7D48 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 6168FE7DCBA34FD96E4AE2B7 /* Sparkle */; };
 		B998BE3BE29B09F3591751D3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C7B379DCACFD7D46658120 /* HomeView.swift */; };
 		BB17A7701C08A3940DAB5352 /* OrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D57466FF55C5470BAA635B /* OrbView.swift */; };
 		BD97932D045D39D6E19AE86C /* Orb.metal in Sources */ = {isa = PBXBuildFile; fileRef = BA3773B33E9EEB76552A2039 /* Orb.metal */; };
@@ -135,6 +136,7 @@
 		794BBA68360C6EF8A11DC966 /* TextInserter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInserter.swift; sourceTree = "<group>"; };
 		79C760E83AF5F83805A97C1F /* OrbOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbOverlay.swift; sourceTree = "<group>"; };
 		7DD95466B3A1EB1690DCF9EA /* ASRAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRAccuracyTests.swift; sourceTree = "<group>"; };
+		844AB65A408DA8E683CB93E3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		84C7B379DCACFD7D46658120 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		870F84A1ECAF4CEF204B6D49 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		87D2AE3889EF724ED1369137 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 			files = (
 				5C13B5C9D3F9BA90C6B0B7A6 /* TakiCore in Frameworks */,
 				DEDE861F2F55C1734CB86413 /* TakiMacEngine in Frameworks */,
+				B9504E96E2D886E0835B7D48 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -360,6 +363,7 @@
 			children = (
 				34AD6A9AB1A3C22EAA2615A5 /* BenchCommand.swift */,
 				686A8C52D092C53AA10B3407 /* Hotkey.swift */,
+				844AB65A408DA8E683CB93E3 /* Info.plist */,
 				6E8997A9F65361E55A92A2B6 /* MacModel.swift */,
 				0197D571269187422BA3857C /* MicCapture.swift */,
 				79C760E83AF5F83805A97C1F /* OrbOverlay.swift */,
@@ -454,6 +458,7 @@
 			packageProductDependencies = (
 				1A0AEC96E82CF5D7624A22F7 /* TakiCore */,
 				5BF8D712478150A9F63B9DA6 /* TakiMacEngine */,
+				6168FE7DCBA34FD96E4AE2B7 /* Sparkle */,
 			);
 			productName = TakiMac;
 			productReference = 39F8F65EB2C7D2B86018B0CF /* TakiMac.app */;
@@ -466,7 +471,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					087373CBF2DFD4130880AEFF = {
 						DevelopmentTeam = 8FGG5DR669;
@@ -496,6 +501,7 @@
 			mainGroup = 793485498FF3989687872743;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				68123789279CCB01D83D8FAF /* XCRemoteSwiftPackageReference "Sparkle" */,
 				A73398A640E3230F1002BAF6 /* XCLocalSwiftPackageReference "Packages/TakiKit" */,
 				96BEA83DCF3EFE2D1514AC45 /* XCLocalSwiftPackageReference "Packages/TakiMac" */,
 			);
@@ -865,11 +871,14 @@
 		AD41269F13201CCA1B659999 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TakiMac.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = BenchCommand.swift;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mac/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Taki;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -878,6 +887,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = "$(TAKI_MAC_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID).mac";
 				PRODUCT_NAME = Taki;
 				SDKROOT = macosx;
@@ -926,11 +936,13 @@
 		F465AC822EEA8A55DE39F13A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TakiMac.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mac/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Taki;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -939,6 +951,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = "$(TAKI_MAC_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TAKI_BUNDLE_ID).mac";
 				PRODUCT_NAME = Taki;
 				SDKROOT = macosx;
@@ -1007,6 +1020,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		68123789279CCB01D83D8FAF /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		1A0AEC96E82CF5D7624A22F7 /* TakiCore */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1019,6 +1043,11 @@
 		5BF8D712478150A9F63B9DA6 /* TakiMacEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TakiMacEngine;
+		};
+		6168FE7DCBA34FD96E4AE2B7 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 68123789279CCB01D83D8FAF /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 		AA65D54A46761847FC9008B8 /* TakiCore */ = {
 			isa = XCSwiftPackageProductDependency;

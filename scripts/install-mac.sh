@@ -25,7 +25,7 @@ echo "Building Taki for Mac (the first build takes a few minutes)…"
 # across updates. Falls back to a local-only signature if Xcode isn't signed in.
 if ! build -allowProvisioningUpdates; then
   echo "Signing with your team failed; building with a local signature instead."
-  build CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=
+  build CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= ENABLE_HARDENED_RUNTIME=NO
 fi
 
 APP=build/MacRelease/Build/Products/Release/Taki.app

@@ -24,6 +24,9 @@ packages:
     path: Packages/TakiKit
   TakiMac:
     path: Packages/TakiMac
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.10.1
 targets:
   Taki:
     type: application
@@ -118,6 +121,7 @@ targets:
         product: TakiCore
       - package: TakiMac
         product: TakiMacEngine
+      - package: Sparkle
     entitlements:
       path: Config/TakiMac.entitlements
       properties:
@@ -127,12 +131,26 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: $(TAKI_BUNDLE_ID).mac
         PRODUCT_NAME: Taki
         TARGETED_DEVICE_FAMILY: ""
+        # Apple silicon only: MLX/speech-swift use Float16, which doesn't build for Intel.
+        ARCHS: arm64
+        MARKETING_VERSION: $(TAKI_MAC_VERSION)
         ENABLE_HARDENED_RUNTIME: YES
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Taki
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_NSMicrophoneUsageDescription: Taki listens only while you hold the talk key. Speech is turned into text on this Mac and never leaves it.
+      configs:
+        Release:
+          EXCLUDED_SOURCE_FILE_NAMES: BenchCommand.swift
+    info:
+      path: Mac/Info.plist
+      properties:
+        # Sparkle auto-updates: the appcast is uploaded to every GitHub Release (scripts/release-mac.sh).
+        SUFeedURL: $(TAKI_MAC_APPCAST_URL)
+        SUPublicEDKey: $(TAKI_SPARKLE_PUBLIC_KEY)
+        SUEnableAutomaticChecks: true
+        SUVerifyUpdateBeforeExtraction: true
   TakiTests:
     type: bundle.unit-test
     platform: iOS
