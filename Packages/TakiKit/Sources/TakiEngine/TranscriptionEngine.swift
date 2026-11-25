@@ -194,14 +194,18 @@ public actor TranscriptionEngine {
     }
 
     private func trimSilence(_ samples: [Float]) async throws -> [Float] {
-        guard let vad, samples.count > 16_000 else { return samples }
+        guard let vad else { return samples }
+        // The first live passes see under a second of boosted room noise (and the tap's click); Parakeet
+        // turns that into a stray "Yeah". Short clips are padded so the VAD can judge them, and need real speech.
+        let isShort = samples.count <= 16_000
+        let padded = isShort ? samples + [Float](repeating: 0, count: 16_000 + 1 - samples.count) : samples
         var config = VadSegmentationConfig.default
         config.speechPadding = 0.35
         config.minSpeechDuration = 0.1
-        let segments = try await vad.segmentSpeech(samples, config: config)
+        let segments = try await vad.segmentSpeech(padded, config: config)
         guard let first = segments.first, let last = segments.last else {
-            // VAD heard nothing: keep the audio only if it isn't near-silent.
-            return SpeechLoudness.speechRMS(samples) > Self.keepWithoutSpeechRMS ? samples : []
+            // VAD heard nothing: keep a longer clip only if it isn't near-silent (whispers can score low).
+            return !isShort && SpeechLoudness.speechRMS(samples) > Self.keepWithoutSpeechRMS ? samples : []
         }
         let start = max(0, first.startSample(sampleRate: 16_000))
         let end = min(samples.count, last.endSample(sampleRate: 16_000))
