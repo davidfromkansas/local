@@ -125,7 +125,7 @@ enum MemoryLog {
     static func start() {
         timer?.invalidate()
         sample()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in MainActor.assumeIsolated { sample() } }
+        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in MainActor.assumeIsolated { sample() } }
     }
 
     static func stop() {
@@ -150,9 +150,9 @@ enum MemoryLog {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
         }
         guard result == KERN_SUCCESS else { return }
-        let used = info.phys_footprint / 1_048_576
+        let used = info.phys_footprint / 1_048_576, peak = info.ledger_phys_footprint_peak / 1_048_576
         let left = os_proc_available_memory() / 1_048_576
-        logger.notice("TAKIMEM footprint \(used, privacy: .public) MB, \(left, privacy: .public) MB left")
+        logger.notice("TAKIMEM footprint \(used, privacy: .public) MB, peak \(peak, privacy: .public) MB, \(left, privacy: .public) MB left")
     }
 }
 #endif

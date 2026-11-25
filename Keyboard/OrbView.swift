@@ -3,6 +3,12 @@ import SwiftUI
 import TakiCore
 
 /// The voice orb shown in place of the letter keys while dictating.
+/// Soft blobs look the same at 2× as at 3×, and 2× cuts each drawable (and the orb's depth buffer) by over half:
+/// the keyboard's 177 MB limit has no room for three full-keyboard 3× surfaces during the bar ↔ orb morph.
+enum MetalScale {
+    static let factor: CGFloat = 2
+}
+
 struct OrbView: UIViewRepresentable {
     let model: KeyboardModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -17,6 +23,7 @@ struct OrbView: UIViewRepresentable {
         view.colorPixelFormat = .bgra8Unorm
         view.depthStencilPixelFormat = .depth32Float
         view.preferredFramesPerSecond = 120
+        view.contentScaleFactor = MetalScale.factor
         view.isUserInteractionEnabled = false
         context.coordinator.renderer?.attach(to: view)
         return view
@@ -43,8 +50,8 @@ final class OrbRenderer: NSObject, MTKViewDelegate {
     static let device = MTLCreateSystemDefaultDevice()
     /// 384 × 192 grid ≈ 150k vertices. The GPU keeps every transformed vertex of a frame in memory that counts
     /// against the keyboard's 177 MB limit: the old 1024 × 1000 grid (2M vertices) got the keyboard killed on iPhone.
-    private let cols: UInt32 = 384
-    private let rows: UInt32 = 192
+    private let cols: UInt32 = 256
+    private let rows: UInt32 = 128
 
     private weak var model: KeyboardModel?
     private let queue: MTLCommandQueue
@@ -206,6 +213,7 @@ struct LavaView: UIViewRepresentable {
         let view = MTKView(frame: .zero, device: OrbRenderer.device)
         view.colorPixelFormat = .bgra8Unorm
         view.preferredFramesPerSecond = 120
+        view.contentScaleFactor = MetalScale.factor
         view.isUserInteractionEnabled = false
         view.delegate = context.coordinator
         return view
@@ -300,6 +308,7 @@ struct MorphView: UIViewRepresentable {
         view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         view.colorPixelFormat = .bgra8Unorm
         view.preferredFramesPerSecond = 120
+        view.contentScaleFactor = MetalScale.factor
         view.isUserInteractionEnabled = false
         view.delegate = context.coordinator
         update(context.coordinator)
